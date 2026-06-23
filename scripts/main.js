@@ -186,12 +186,21 @@ controls.maxDistance = 20;
 controls.enablePan = false;
 
 // ---- Geometry + shader material -----------------------------------------
+// One persistent BufferAttribute per formation. Morphing just rebinds these
+// cached objects to the aStart/aEnd slots, so their GPU buffers are uploaded
+// once and reused — never re-created — which avoids leaking VBOs per morph.
+const shapeAttrs = shapes.map((data) => new THREE.BufferAttribute(data, 3));
+
 const geometry = new THREE.BufferGeometry();
-geometry.setAttribute("aStart", new THREE.BufferAttribute(shapes[0], 3));
-geometry.setAttribute("aEnd", new THREE.BufferAttribute(shapes[0], 3));
+geometry.setAttribute("aStart", shapeAttrs[0]);
+geometry.setAttribute("aEnd", shapeAttrs[0]);
 geometry.setAttribute("aColor", new THREE.BufferAttribute(colors, 3));
 geometry.setAttribute("aSeed", new THREE.BufferAttribute(seeds, 1));
 geometry.setAttribute("aScale", new THREE.BufferAttribute(scales, 1));
+// The shader positions particles from aStart/aEnd, so there is no `position`
+// attribute. Without one (and with no index) the renderer can't infer a draw
+// count, so set it explicitly or nothing draws.
+geometry.setDrawRange(0, COUNT);
 
 const uniforms = {
   uTime: { value: 0 },
@@ -257,6 +266,10 @@ const material = new THREE.ShaderMaterial({
 });
 
 const points = new THREE.Points(geometry, material);
+// Particles span well beyond the initial galaxy bounds as they morph, and the
+// cloud always fills the view, so skip frustum culling (also avoids relying on
+// a bounding sphere we never compute without a `position` attribute).
+points.frustumCulled = false;
 scene.add(points);
 
 // ---- Distant starfield backdrop -----------------------------------------
@@ -299,9 +312,9 @@ const MORPH_SECONDS = 2.6;
 
 function morphTo(index) {
   if (index === currentIndex && uniforms.uMorph.value === 0) return;
-  // freeze the current displayed formation as the new start
-  geometry.setAttribute("aStart", new THREE.BufferAttribute(shapes[currentIndex], 3));
-  geometry.setAttribute("aEnd", new THREE.BufferAttribute(shapes[index], 3));
+  // rebind the cached attributes: current formation -> chosen formation
+  geometry.setAttribute("aStart", shapeAttrs[currentIndex]);
+  geometry.setAttribute("aEnd", shapeAttrs[index]);
   uniforms.uMorph.value = 0;
   targetIndex = index;
   morphing = true;
@@ -361,8 +374,9 @@ function tick() {
     if (uniforms.uMorph.value >= 1) {
       uniforms.uMorph.value = 0;
       currentIndex = targetIndex;
-      geometry.setAttribute("aStart", new THREE.BufferAttribute(shapes[currentIndex], 3));
-      geometry.setAttribute("aEnd", new THREE.BufferAttribute(shapes[currentIndex], 3));
+      // settle onto the finished formation (both slots reuse the same cache)
+      geometry.setAttribute("aStart", shapeAttrs[currentIndex]);
+      geometry.setAttribute("aEnd", shapeAttrs[currentIndex]);
       morphing = false;
       autoTimer = 0;
     }
