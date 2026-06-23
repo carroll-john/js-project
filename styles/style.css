@@ -1,42 +1,184 @@
-
-html {
-  font-size: 10px;
-  font-family: 'Open Sans', sans-serif;
+:root {
+  --bg: #02020a;
+  --ink: #eaf2ff;
+  --muted: rgba(234, 242, 255, 0.55);
+  --accent: #6fb1ff;
+  --glass: rgba(140, 170, 255, 0.08);
+  --glass-border: rgba(140, 170, 255, 0.22);
+  font-family: "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif;
 }
 
-
-h1 {
-  font-size: 60px;
-  text-align: center;
+* {
+  box-sizing: border-box;
 }
 
-p, li {
-  font-size: 16px;
-  line-height: 2;
-  letter-spacing: 1px;
-}
-
-
-html {
-  background-color: #00539F;
-}
-
+html,
 body {
-  width: 600px;
-  margin: 0 auto;
-  background-color: #FF9500;
-  padding: 0 20px 20px 20px;
-  border: 5px solid black;
-}
-
-h1 {
   margin: 0;
-  padding: 20px 0;
-  color: #00539F;
-  text-shadow: 3px 3px 1px black;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
 }
 
-img {
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   display: block;
-  margin: 0 auto;
+  touch-action: none;
+}
+
+/* ---------- HUD ---------- */
+.hud {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: clamp(1rem, 3vw, 2.2rem);
+  pointer-events: none;
+  text-align: center;
+  user-select: none;
+}
+
+.hud--top {
+  top: 0;
+  background: linear-gradient(to bottom, rgba(2, 2, 10, 0.65), transparent);
+}
+
+.hud--bottom {
+  bottom: 0;
+  background: linear-gradient(to top, rgba(2, 2, 10, 0.7), transparent);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.5rem, 5vw, 3.1rem);
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  line-height: 1;
+  background: linear-gradient(120deg, #ff8a5c 0%, #ffd36f 30%, #8fd0ff 70%, #b69bff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 18px rgba(120, 170, 255, 0.35));
+}
+
+.subtitle {
+  margin: 0;
+  font-size: clamp(0.65rem, 1.6vw, 0.85rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hint {
+  margin: 0.2rem 0 0;
+  font-size: clamp(0.6rem, 1.5vw, 0.75rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---------- Shape buttons ---------- */
+.shapes {
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.shape-btn {
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--ink);
+  font: inherit;
+  font-size: clamp(0.62rem, 1.5vw, 0.8rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.55em 1.05em;
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.18s ease, background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.shape-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.shape-btn.is-active {
+  background: linear-gradient(120deg, rgba(255, 150, 100, 0.9), rgba(150, 170, 255, 0.9));
+  border-color: transparent;
+  color: #06060f;
+  box-shadow: 0 0 22px rgba(130, 170, 255, 0.45);
+}
+
+/* ---------- Loader ---------- */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+  background: var(--bg);
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+
+.loader.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loader__ring {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(140, 170, 255, 0.2);
+  border-top-color: var(--accent);
+  animation: spin 0.9s linear infinite;
+}
+
+.loader__text {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.fallback {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader__ring {
+    animation: none;
+  }
 }
