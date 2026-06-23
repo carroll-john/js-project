@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#DDEAB3" />
+    <title>Hoopla Salon — Brunswick · step inside</title>
+    <meta
+      name="description"
+      content="Step inside Hoopla Salon, Brunswick. An award-winning, eco-friendly salon on Sydney Road. Explore the room, meet the stylists and book — cuts, colour, balayage, Olaplex."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&family=Shadows+Into+Light+Two&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles/style.css" />
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <!-- The salon. Fills the screen; you orbit around it. -->
+    <canvas id="scene"></canvas>
+
+    <!-- Boot overlay -->
+    <div id="loader" class="loader">
+      <div class="loader__hoop"></div>
+      <p class="loader__text">opening the salon…</p>
+    </div>
+
+    <!-- Floating hover label that follows the cursor -->
+    <div id="hoverLabel" class="hover-label" aria-hidden="true"></div>
+
+    <!-- Minimal chrome -->
+    <a class="brand" href="#" id="brand">hoopla<span class="brand__dot">●</span></a>
+
+    <div class="controls">
+      <button id="themeToggle" class="icon-btn" aria-label="Toggle day / night" title="Day / night">
+        <span class="icon-btn__day">☀</span><span class="icon-btn__night">☾</span>
+      </button>
+      <button id="menuToggle" class="icon-btn" aria-label="Open menu" aria-expanded="false">
+        <span class="bars"><i></i><i></i><i></i></span>
+      </button>
+    </div>
+
+    <!-- Overlay navigation -->
+    <nav id="overlayNav" class="overlay-nav" aria-hidden="true">
+      <ul class="overlay-nav__links">
+        <li><a href="#" data-info="vibe">the vibe</a></li>
+        <li><a href="#" data-action="services">services</a></li>
+        <li><a href="#" data-action="team">meet the team</a></li>
+        <li><a href="#" data-info="visit">visit</a></li>
+      </ul>
+      <div class="overlay-nav__social">
+        <a href="https://www.instagram.com/hooplasalon/" target="_blank" rel="noopener">Instagram</a>
+        <a href="https://www.facebook.com/Hooplasalon/" target="_blank" rel="noopener">Facebook</a>
+        <a href="https://apps.kitomba.com/bookings/hooplasalon" target="_blank" rel="noopener">Book</a>
+      </div>
+      <p class="overlay-nav__hint">tip — tap the neon sign to flip day &amp; night ✦</p>
+    </nav>
+
+    <!-- Hero intro overlay (fades once you start exploring) -->
+    <div id="hero" class="hero">
+      <p class="hero__eyebrow">Brunswick · Sydney Road</p>
+      <h1 class="hero__word">hoopla</h1>
+      <p class="hero__def"><em>noun</em> — excitement, celebration,<br />something worth talking about.</p>
+      <a class="btn" href="https://apps.kitomba.com/bookings/hooplasalon" target="_blank" rel="noopener">Book now</a>
+    </div>
+
+    <!-- Persistent explore hint -->
+    <p id="explore" class="explore">drag to look around · tap a stylist or the front desk</p>
+
+    <!-- Modal shell (filled by JS) -->
+    <div id="modal" class="modal" aria-hidden="true">
+      <div class="modal__backdrop" data-close></div>
+      <div class="modal__dialog card" role="dialog" aria-modal="true">
+        <button class="modal__close" aria-label="Close" data-close>✕</button>
+        <div id="modalBody" class="modal__body"></div>
+      </div>
+    </div>
+
+    <!-- Real address for crawlers / no-JS -->
+    <noscript>
+      <div style="position:fixed;inset:0;display:grid;place-items:center;background:#ddeab3;color:#43323a;text-align:center;padding:2rem;font-family:sans-serif">
+        <div>
+          <h1>Hoopla Salon</h1>
+          <p>345 Sydney Road, Brunswick VIC 3056 — award-winning, eco-friendly hairdressing.</p>
+          <p><a href="https://apps.kitomba.com/bookings/hooplasalon">Book online</a></p>
+        </div>
+      </div>
+    </noscript>
+
+    <script type="module" src="scripts/main.js"></script>
+  </body>
+</html>
