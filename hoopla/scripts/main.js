@@ -323,7 +323,7 @@ scene.add(room);
 // floor
 const floor = new THREE.Mesh(
   rbox(15, 0.4, 13, 0.18),
-  clay(0xe7dbc6, { roughness: 0.85 })
+  clay(0xbcbbb5, { roughness: 0.42 }) // polished concrete
 );
 floor.position.y = -0.2;
 floor.receiveShadow = true;
