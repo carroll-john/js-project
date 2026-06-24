@@ -4,6 +4,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 
 /* ============================================================ *
  * HOOPLA SALON — step inside
@@ -130,6 +131,11 @@ controls.autoRotateSpeed = 0.55;
 function clay(color, extra = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.95, metalness: 0, ...extra });
 }
+// soft, rounded "clay" box
+function rbox(w, h, d, r = 0.1, seg = 5) {
+  const rr = Math.max(0.01, Math.min(r, Math.min(w, h, d) / 2 - 0.01));
+  return new RoundedBoxGeometry(w, h, d, seg, rr);
+}
 function shade(obj) {
   obj.traverse((o) => {
     if (o.isMesh) {
@@ -254,7 +260,7 @@ scene.add(room);
 
 // floor
 const floor = new THREE.Mesh(
-  new THREE.BoxGeometry(15, 0.4, 13),
+  rbox(15, 0.4, 13, 0.18),
   clay(0xe7dbc6, { roughness: 0.85 })
 );
 floor.position.y = -0.2;
@@ -329,9 +335,10 @@ function makeChair() {
   base.position.y = 0.08;
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.7, 16), clay(0x3a3440));
   pole.position.y = 0.5;
-  const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.22, 24), clay(C.plum));
-  seat.position.y = 0.92;
-  const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.05, 0.22), clay(C.plum));
+  const seat = new THREE.Mesh(new THREE.SphereGeometry(0.48, 28, 20), clay(C.plum));
+  seat.scale.set(1, 0.44, 1);
+  seat.position.y = 0.95;
+  const backrest = new THREE.Mesh(rbox(0.9, 1.05, 0.22, 0.1), clay(C.plum));
   backrest.position.set(0, 1.55, -0.34);
   g.add(base, pole, seat, backrest);
   return shade(g);
@@ -374,10 +381,10 @@ function makeStylist(s) {
 /* ---- floating mustard shelf with bottles ---- */
 function makeShelf() {
   const g = new THREE.Group();
-  const board = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.1, 0.5), clay(C.mustard));
+  const board = new THREE.Mesh(rbox(2.2, 0.1, 0.5, 0.04), clay(C.mustard));
   board.position.y = 0;
   g.add(board);
-  const lip = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.3, 0.08), clay(C.mustard));
+  const lip = new THREE.Mesh(rbox(2.2, 0.3, 0.08, 0.03), clay(C.mustard));
   lip.position.set(0, 0.1, 0.21);
   g.add(lip);
   const bottleCols = [0x6b4a2f, 0x2a2230, 0xf3c9da, 0x6b4a2f];
@@ -418,13 +425,13 @@ STYLISTS.forEach((s, i) => {
   mirror.position.set(x, 3.1, -5.78);
   room.add(mirror);
 
-  const counter = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.18, 0.7), clay(C.off));
+  const counter = new THREE.Mesh(rbox(2.1, 0.18, 0.7, 0.07), clay(C.off));
   counter.position.set(x, 1.05, -5.4);
   shade(counter);
   room.add(counter);
   const legMat = clay(0x3a3440);
   for (const dx of [-0.85, 0.85]) {
-    const cl = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.05, 0.12), legMat);
+    const cl = new THREE.Mesh(rbox(0.12, 1.05, 0.12, 0.05), legMat);
     cl.position.set(x + dx, 0.52, -5.4);
     room.add(cl);
   }
@@ -476,7 +483,7 @@ STYLISTS.forEach((s, i) => {
 /* ---- reception desk (opens the service menu) ---- */
 {
   const desk = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.5, 1.2), clay(0x6a4f5e));
+  const body = new THREE.Mesh(rbox(3.2, 1.5, 1.2, 0.16), clay(0x6a4f5e));
   body.position.y = 0.75;
   desk.add(body);
   const front = new THREE.Mesh(
@@ -486,21 +493,21 @@ STYLISTS.forEach((s, i) => {
   front.material.map.repeat.set(3, 1.2);
   front.position.set(0, 0.75, 0.61);
   desk.add(front);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.14, 1.4), clay(C.mustard));
+  const top = new THREE.Mesh(rbox(3.4, 0.14, 1.4, 0.06), clay(C.mustard));
   top.position.y = 1.55;
   desk.add(top);
 
   // cash register — big & bright, with a glowing screen, so it's easy to spot
   const reg = new THREE.Group();
-  const regBody = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.6, 0.72), clay(C.mustard));
+  const regBody = new THREE.Mesh(rbox(0.95, 0.6, 0.72, 0.12), clay(C.mustard));
   regBody.position.y = 0.3;
   const screen = new THREE.Mesh(
-    new THREE.BoxGeometry(0.74, 0.46, 0.08),
+    rbox(0.74, 0.46, 0.08, 0.035),
     new THREE.MeshStandardMaterial({ color: 0x1f1b29, emissive: 0x7fa8ff, emissiveIntensity: 0.6, roughness: 0.4 })
   );
   screen.position.set(0, 0.64, -0.2);
   screen.rotation.x = -0.42;
-  const keys = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.1, 0.4), clay(C.off));
+  const keys = new THREE.Mesh(rbox(0.82, 0.1, 0.4, 0.04), clay(C.off));
   keys.position.set(0, 0.2, 0.2);
   reg.add(regBody, screen, keys);
   reg.position.set(-0.85, 1.62, 0);
@@ -531,9 +538,9 @@ STYLISTS.forEach((s, i) => {
 /* ---- waiting bench + coffee table ---- */
 {
   const bench = new THREE.Group();
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.4, 0.95), clay(C.mustard));
+  const seat = new THREE.Mesh(rbox(2.6, 0.4, 0.95, 0.16), clay(C.mustard));
   seat.position.y = 0.5;
-  const back = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.9, 0.25), clay(C.mustard));
+  const back = new THREE.Mesh(rbox(2.6, 0.9, 0.25, 0.1), clay(C.mustard));
   back.position.set(0, 0.95, -0.35);
   bench.add(seat, back);
   shade(bench);
@@ -645,6 +652,7 @@ key.shadow.camera.right = 12;
 key.shadow.camera.top = 12;
 key.shadow.camera.bottom = -12;
 key.shadow.bias = -0.0004;
+key.shadow.radius = 4;
 scene.add(key);
 const fill = new THREE.DirectionalLight(0xbfa8ff, 0.35);
 fill.position.set(-8, 6, 4);
