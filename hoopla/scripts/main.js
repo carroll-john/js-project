@@ -269,6 +269,29 @@ const leopardTex = canvasTex((x, w, h) => {
   }
 }, 256, 256, [2, 3]);
 
+// terrazzo / exposed-aggregate floor (cream base, dark speckle)
+const terrazzoTex = canvasTex((x, w, h) => {
+  x.fillStyle = "#e7e0cd";
+  x.fillRect(0, 0, w, h);
+  const chips = ["#272320", "#1b1814", "#39332a", "#272320", "#1b1814", "#8a8276", "#a8a094", "#b9a886", "#5c5246"];
+  for (let i = 0; i < 850; i++) {
+    const cx = Math.random() * w;
+    const cy = Math.random() * h;
+    const r = 1.5 + Math.random() * 5.5;
+    x.fillStyle = chips[(Math.random() * chips.length) | 0];
+    const pts = 5 + ((Math.random() * 3) | 0);
+    x.beginPath();
+    x.moveTo(cx + r, cy);
+    for (let k = 1; k <= pts; k++) {
+      const a = (k / pts) * Math.PI * 2;
+      const rr = r * (0.55 + Math.random() * 0.6);
+      x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+    }
+    x.closePath();
+    x.fill();
+  }
+}, 512, 512, [3, 3]);
+
 /* floating, always-visible 3D tag (camera-facing sprite) */
 function makeLabel(text, sx = 2.6, sy = 0.8) {
   const tex = canvasTex((x, w, h) => {
@@ -323,7 +346,7 @@ scene.add(room);
 // floor
 const floor = new THREE.Mesh(
   rbox(15, 0.4, 13, 0.18),
-  clay(0xbcbbb5, { roughness: 0.42 }) // polished concrete
+  new THREE.MeshStandardMaterial({ map: terrazzoTex, roughness: 0.5, metalness: 0 }) // polished terrazzo
 );
 floor.position.y = -0.2;
 floor.receiveShadow = true;
@@ -607,47 +630,41 @@ stationIds.forEach((id, i) => {
   room.add(hoop);
 }
 
-/* ---- reception desk (opens the service menu) ---- */
+/* ---- reception desk: dusty-rose rounded slab on castors ---- */
 {
   const desk = new THREE.Group();
-  const body = new THREE.Mesh(rbox(3.2, 1.5, 1.2, 0.16), clay(0x6a4f5e));
-  body.position.y = 0.75;
+  const rose = 0xa96e79;
+
+  // chunky, very rounded slab
+  const body = new THREE.Mesh(rbox(3.2, 1.42, 1.15, 0.4), clay(rose, { roughness: 0.6 }));
+  body.position.y = 0.86;
   desk.add(body);
-  const front = new THREE.Mesh(
-    new THREE.PlaneGeometry(3.18, 1.46),
-    new THREE.MeshStandardMaterial({ map: pinkChecker.clone(), roughness: 0.85 })
-  );
-  front.material.map.repeat.set(3, 1.2);
-  front.position.set(0, 0.75, 0.61);
-  desk.add(front);
-  const top = new THREE.Mesh(rbox(3.4, 0.14, 1.4, 0.06), clay(C.mustard));
-  top.position.y = 1.55;
+
+  // slightly lighter rounded top where products sit
+  const top = new THREE.Mesh(rbox(3.16, 0.18, 1.12, 0.09), clay(0xbb828d, { roughness: 0.5 }));
+  top.position.y = 1.6;
   desk.add(top);
 
-  // cash register — big & bright, with a glowing screen, so it's easy to spot
-  const reg = new THREE.Group();
-  const regBody = new THREE.Mesh(rbox(0.95, 0.6, 0.72, 0.12), clay(C.mustard));
-  regBody.position.y = 0.3;
-  const screen = new THREE.Mesh(
-    rbox(0.74, 0.46, 0.08, 0.035),
-    new THREE.MeshStandardMaterial({ color: 0x1f1b29, emissive: 0x7fa8ff, emissiveIntensity: 0.6, roughness: 0.4 })
-  );
-  screen.position.set(0, 0.64, -0.2);
-  screen.rotation.x = -0.42;
-  const keys = new THREE.Mesh(rbox(0.82, 0.1, 0.4, 0.04), clay(C.off));
-  keys.position.set(0, 0.2, 0.2);
-  reg.add(regBody, screen, keys);
-  reg.position.set(-0.85, 1.62, 0);
-  desk.add(reg);
+  // castor wheels
+  const wheelMat = clay(0x26222c, { roughness: 0.5, metalness: 0.3 });
+  for (const wx of [-1.3, 1.3]) {
+    for (const wz of [-0.42, 0.42]) {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.08, 16), wheelMat);
+      w.rotation.z = Math.PI / 2;
+      w.position.set(wx, 0.11, wz);
+      desk.add(w);
+    }
+  }
 
-  const bell = new THREE.Mesh(
-    new THREE.SphereGeometry(0.16, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2),
-    clay(0xcf3f5a)
-  );
-  bell.position.set(0.85, 1.7, 0.15);
-  desk.add(bell);
+  // a few products on top
+  const prodCols = [0x6b4a2f, 0xf3c9da, 0x2a2230, 0xd9c56a];
+  prodCols.forEach((col, i) => {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.3, 14), clay(col, { roughness: 0.5 }));
+    b.position.set(-0.6 + i * 0.32, 1.85, -0.18);
+    desk.add(b);
+  });
 
-  // small "menu" sign standing on the counter (part of the scene)
+  // small "menu" sign standing on the counter
   const sign = new THREE.Group();
   const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.42, 10), clay(C.plum));
   post.position.y = 0.21;
@@ -659,7 +676,7 @@ stationIds.forEach((id, i) => {
   );
   plateText.position.set(0, 0.66, 0.032);
   sign.add(post, plate, plateText);
-  sign.position.set(0.7, 1.62, 0.4);
+  sign.position.set(0.78, 1.7, 0.28);
   desk.add(sign);
 
   shade(desk);
