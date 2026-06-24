@@ -206,17 +206,6 @@ const pinkChecker = canvasTex((x, w, h) => {
     }
 }, 256, 256, [10, 1]);
 
-// playful mustard + cream checker (echoes the salon's checker tiles)
-const mustardCheck = canvasTex((x, w, h) => {
-  const n = 8;
-  const s = w / n;
-  for (let i = 0; i < n; i++)
-    for (let j = 0; j < n; j++) {
-      x.fillStyle = (i + j) % 2 ? "#ded663" : "#f3c9da";
-      x.fillRect(i * s, j * s, s, s);
-    }
-}, 256, 256, [3, 2]);
-
 const neonTex = (text) =>
   canvasTex((x, w, h) => {
     x.clearRect(0, 0, w, h);
@@ -351,16 +340,6 @@ const floor = new THREE.Mesh(
 floor.position.y = -0.2;
 floor.receiveShadow = true;
 room.add(floor);
-
-// checker rug (mustard + cream)
-const rug = new THREE.Mesh(
-  new THREE.PlaneGeometry(6.4, 4.6),
-  new THREE.MeshStandardMaterial({ map: mustardCheck, roughness: 0.9 })
-);
-rug.rotation.x = -Math.PI / 2;
-rug.position.set(0, 0.02, 1.2);
-rug.receiveShadow = true;
-room.add(rug);
 
 // walls (back + left) with gradient
 const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 1 });
