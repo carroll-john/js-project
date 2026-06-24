@@ -14,7 +14,8 @@
 
   /* Theme-driven tokens (light = default) */
   --ink: var(--plum);
-  --ink-soft: rgba(67, 50, 58, 0.62);
+  --ink-soft: rgba(67, 50, 58, 0.74);
+  --gold-ink: #766810; /* legible gold for accent text on light cards */
   --card-bg: rgba(250, 249, 245, 0.74);
   --card-border: rgba(67, 50, 58, 0.14);
   --card-shadow: 0 30px 70px -28px rgba(67, 50, 58, 0.5);
@@ -32,6 +33,7 @@
 html.dark {
   --ink: #f2efe9;
   --ink-soft: rgba(242, 239, 233, 0.72);
+  --gold-ink: var(--mustard);
   --card-bg: rgba(43, 35, 47, 0.62);
   --card-border: rgba(242, 239, 233, 0.18);
   --card-shadow: 0 30px 80px -26px rgba(0, 0, 0, 0.75);
@@ -356,7 +358,7 @@ html.dark .btn {
 .kicker {
   font-family: var(--font-hand);
   font-size: 1.5rem;
-  color: var(--mustard);
+  color: var(--gold-ink);
   line-height: 1;
 }
 .hand {
@@ -446,7 +448,7 @@ html.dark .btn {
 .stylist__role {
   font-family: var(--font-hand);
   font-size: 1.4rem;
-  color: var(--mustard);
+  color: var(--gold-ink);
 }
 .modal__body p {
   font-weight: 500;
@@ -503,7 +505,7 @@ html.dark .chip {
 .menu .price {
   font-family: var(--font-hand);
   font-size: 1.4rem;
-  color: var(--mustard);
+  color: var(--gold-ink);
   white-space: nowrap;
 }
 
@@ -570,7 +572,7 @@ html.dark .badge {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-size: 0.78rem;
-  color: var(--mustard);
+  color: var(--gold-ink);
   margin-bottom: 0.3rem;
 }
 .info-cols a {
