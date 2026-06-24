@@ -286,7 +286,7 @@ function makeLabel(text, sx = 2.6, sy = 0.8) {
     x.font = "600 60px 'Space Grotesk', system-ui, sans-serif";
     x.textAlign = "center";
     x.textBaseline = "middle";
-    x.fillStyle = "#ded663";
+    x.fillStyle = "#faf9f5";
     x.fillText(text, w / 2, h / 2 + 2);
   }, 512, 160);
   const sp = new THREE.Sprite(

@@ -331,11 +331,11 @@ html.dark .btn {
   z-index: 45;
   transform: translate(-50%, -140%);
   background: var(--plum);
-  color: var(--mustard);
-  font-size: 0.78rem;
+  color: var(--offwhite);
+  font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.03em;
-  padding: 6px 12px;
+  padding: 6px 13px;
   border-radius: var(--radius-pill);
   white-space: nowrap;
   pointer-events: none;
