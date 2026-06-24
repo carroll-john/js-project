@@ -533,10 +533,42 @@ function placePerson(member, x, z, rotY, seated = false) {
   slot.rotation.y = rotY;
   room.add(slot);
   markInteractive(slot, { action: "stylist", id: member.id, label: `${member.name} — ${member.role}`, baseRotY: rotY, seated });
+  slot.userData.figure = person;
   const tag = makeLabel(member.name, 1.5, 0.46);
   tag.position.set(0, seated ? 2.85 : 2.95, 0);
   slot.add(tag);
   return slot;
+}
+
+// Lana's night-mode alter ego 🍌
+function makeBanana() {
+  const g = new THREE.Group();
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.0, 0.08, 0),
+    new THREE.Vector3(-0.16, 0.6, 0),
+    new THREE.Vector3(-0.2, 1.15, 0),
+    new THREE.Vector3(-0.12, 1.65, 0),
+    new THREE.Vector3(0.1, 2.0, 0),
+  ]);
+  const body = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, 48, 0.2, 16, false),
+    new THREE.MeshStandardMaterial({ color: 0xf2d23a, roughness: 0.5, emissive: 0x5a4a10, emissiveIntensity: 0.18 })
+  );
+  g.add(body);
+  const tipMat = clay(0x5e421f);
+  const bottom = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.22, 12), tipMat);
+  bottom.rotation.x = Math.PI;
+  g.add(bottom);
+  const top = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 12), tipMat);
+  top.position.set(0.12, 2.08, 0);
+  g.add(top);
+  const eyeMat = clay(0x2a2230);
+  for (const dx of [-0.07, 0.07]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 10), eyeMat);
+    eye.position.set(dx - 0.16, 1.45, 0.18);
+    g.add(eye);
+  }
+  return shade(g);
 }
 
 /* ---- floating mustard shelf with bottles ---- */
@@ -728,7 +760,11 @@ stationIds.forEach((id, i) => {
 
 /* ---- Emma relaxing on the couch + Lana behind the front desk ---- */
 placePerson(STYLISTS.find((m) => m.id === "emma"), -4.6, 3.4, 0.5, true);
-placePerson(STYLISTS.find((m) => m.id === "lana"), 4.4, 2.5, -0.55, false);
+const lanaSlot = placePerson(STYLISTS.find((m) => m.id === "lana"), 4.4, 2.5, -0.55, false);
+const lanaBanana = makeBanana();
+lanaBanana.visible = false;
+lanaSlot.add(lanaBanana);
+lanaSlot.userData.banana = lanaBanana;
 
 function makePlantAt(x, z, sc) {
   const p = makePlant(sc);
@@ -1202,6 +1238,9 @@ function tick() {
       }
       o.mat.needsUpdate = true;
     }
+    // Lana turns into a banana at night 🍌
+    lanaSlot.userData.figure.visible = !wantDisco;
+    lanaSlot.userData.banana.visible = wantDisco;
   }
 
   controls.update();
