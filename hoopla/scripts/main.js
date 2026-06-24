@@ -546,7 +546,7 @@ stationIds.forEach((id, i) => {
   mirror.position.set(x, 3.1, -5.78);
   room.add(mirror);
 
-  const counter = new THREE.Mesh(rbox(2.1, 0.18, 0.7, 0.07), clay(C.off));
+  const counter = new THREE.Mesh(rbox(2.1, 0.18, 0.7, 0.07), clay(C.pink));
   counter.position.set(x, 1.05, -5.4);
   shade(counter);
   room.add(counter);
