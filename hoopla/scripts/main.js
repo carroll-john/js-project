@@ -328,6 +328,28 @@ const warmLights = []; // station point lights
 let neonMat;
 let starMat;
 
+/* disco mode (night) — party hats on the staff */
+const partyHats = [];
+const PARTY_COLORS = [0xff4f9a, 0x4fd0ff, 0xffe14f, 0xb06bff, 0x5fd08f, 0xff8a3d];
+function addPartyHat(g, y) {
+  const col = PARTY_COLORS[partyHats.length % PARTY_COLORS.length];
+  const hat = new THREE.Mesh(
+    new THREE.ConeGeometry(0.2, 0.46, 18),
+    new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0, roughness: 0.5 })
+  );
+  hat.position.set(0.02, y, 0.02);
+  hat.rotation.z = 0.12;
+  hat.visible = false;
+  const pom = new THREE.Mesh(
+    new THREE.SphereGeometry(0.07, 12, 12),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0 })
+  );
+  pom.position.set(0.05, y + 0.25, 0.05);
+  pom.visible = false;
+  g.add(hat, pom);
+  partyHats.push(hat, pom);
+}
+
 /* ====================== build the room ====================== */
 const room = new THREE.Group();
 scene.add(room);
@@ -456,6 +478,7 @@ function makeStylist(s, seated = false) {
     );
     hair.position.y = 2.08;
     g.add(hair);
+    addPartyHat(g, 2.42);
     return shade(g);
   }
 
@@ -486,6 +509,7 @@ function makeStylist(s, seated = false) {
   );
   hair.position.y = 2.24;
   g.add(hair);
+  addPartyHat(g, 2.6);
   return shade(g);
 }
 
@@ -709,6 +733,57 @@ const shelf = makeShelf();
 shelf.position.set(-7.15, 2.4, -2.2);
 shelf.rotation.y = Math.PI / 2; // mount on the left wall (clear of the mirror)
 room.add(shelf);
+
+/* ====================== disco (night-mode party) ====================== */
+const danceFloor = new THREE.Group();
+const danceTiles = [];
+{
+  const tileGeo = new THREE.PlaneGeometry(0.74, 0.74);
+  const N = 6;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x0a0a0a,
+        emissive: 0xffffff,
+        emissiveIntensity: 0,
+        roughness: 0.4,
+      });
+      const tile = new THREE.Mesh(tileGeo, mat);
+      tile.rotation.x = -Math.PI / 2;
+      tile.position.set((i - (N - 1) / 2) * 0.8, 0.05, (j - (N - 1) / 2) * 0.8);
+      danceFloor.add(tile);
+      danceTiles.push({ mat, h: (i * N + j) / (N * N) });
+    }
+  }
+}
+danceFloor.position.set(0, 0, 0.6);
+danceFloor.visible = false;
+room.add(danceFloor);
+
+const discoRig = new THREE.Group();
+const discoBall = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(0.55, 1),
+  new THREE.MeshStandardMaterial({
+    color: 0xcfd6e6,
+    metalness: 0.9,
+    roughness: 0.22,
+    flatShading: true,
+    emissive: 0x9aa2c0,
+    emissiveIntensity: 0,
+  })
+);
+const discoCord = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 3.4, 8), clay(0x222028));
+discoCord.position.y = 2.25;
+discoRig.add(discoBall, discoCord);
+discoRig.position.set(0, 8.5, 0.6);
+discoRig.visible = false;
+room.add(discoRig);
+
+const discoLights = [0xff4f9a, 0x4fd0ff, 0xffe14f].map((c) => {
+  const l = new THREE.PointLight(c, 0, 18, 2);
+  room.add(l);
+  return l;
+});
 
 /* ====================== sky + stars + confetti ====================== */
 const skyUniforms = {
@@ -1061,6 +1136,31 @@ function tick() {
     }
     p.needsUpdate = true;
     confetti.rotation.y = t * 0.02;
+  }
+
+  // disco mode (active in night)
+  const showDisco = themeT > 0.01;
+  danceFloor.visible = showDisco;
+  discoRig.visible = showDisco;
+  if (showDisco) {
+    discoRig.position.y = lerp(8.5, 4.6, themeT);
+    discoBall.rotation.y += dt * 0.8;
+    discoBall.material.emissiveIntensity = themeT * 0.5;
+    for (const tile of danceTiles) {
+      tile.mat.emissive.setHSL((t * 0.08 + tile.h) % 1, 0.85, 0.55);
+      tile.mat.emissiveIntensity = themeT * (0.45 + 0.55 * Math.sin(t * 3 + tile.h * 12));
+    }
+    discoLights.forEach((l, i) => {
+      const a = t * 0.9 + (i / 3) * Math.PI * 2;
+      l.position.set(Math.cos(a) * 4.2, 3.6 + Math.sin(t * 1.6 + i) * 1.1, 0.6 + Math.sin(a) * 4.2);
+      l.intensity = themeT * 2.4;
+    });
+  } else {
+    discoLights.forEach((l) => (l.intensity = 0));
+  }
+  for (const h of partyHats) {
+    h.visible = showDisco;
+    h.material.emissiveIntensity = themeT * 0.6;
   }
 
   controls.update();
