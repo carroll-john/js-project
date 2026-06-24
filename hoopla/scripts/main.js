@@ -30,45 +30,56 @@ const C = {
   wine: 0x7a2f4a,
 };
 
-/* ---- Content (placeholder bios/prices — easy to edit) -------------------- *
- * Tynne is the real owner; the rest are friendly placeholders. Swap names,
- * bios and prices for the real team before going live. */
+/* ---- Team & menu. Real team names below; bios & prices are placeholders to
+ * confirm/replace before launch. ------------------------------------------- */
 const STYLISTS = [
   {
-    id: "tynne",
-    name: "Tynne",
+    id: "emma",
+    name: "Emma",
     role: "Owner & Creative Director",
-    initial: "T",
+    initial: "E",
     color: "#43323a",
     hair: 0x2a2230,
     smock: C.mustard,
     skin: 0xe8c4a8,
-    bio: "Hoopla's founder and the reason it all feels like a celebration. Tynne has led the team to multiple Salon of the Year wins and lives for a transformation that makes you stand a little taller.",
+    bio: "Hoopla's owner and the reason it all feels like a celebration. Emma has led the team to multiple Salon of the Year wins and lives for a transformation that makes you stand a little taller.",
     specs: ["Transformations", "Colour correction", "Editorial"],
   },
   {
-    id: "remy",
-    name: "Remy",
-    role: "Colour Specialist",
-    initial: "R",
+    id: "paige",
+    name: "Paige",
+    role: "Senior Stylist",
+    initial: "P",
     color: "#7a2f4a",
     hair: 0x8d3d63,
     smock: C.plum,
     skin: 0xc9956f,
-    bio: "Balayage whisperer. Remy paints lived-in, low-maintenance colour that grows out beautifully — think sun-kissed, never stripey. Ask about a gloss to keep it glassy.",
-    specs: ["Balayage", "Foils", "Demi gloss"],
+    bio: "Sharp, considered cuts with a soft finish. Paige reads your hair's natural movement first, then cuts to it — curls, cowlicks and all. Lived-in colour is her happy place.",
+    specs: ["Precision cuts", "Lived-in colour", "Styling"],
   },
   {
-    id: "juno",
-    name: "Juno",
-    role: "Cutting & Styling",
-    initial: "J",
+    id: "kristy",
+    name: "Kristy",
+    role: "Colour Specialist",
+    initial: "K",
     color: "#3a5a78",
-    hair: 0x2a2230,
+    hair: 0xc9a14a,
     smock: C.indigo,
+    skin: 0xead0bb,
+    bio: "Balayage whisperer. Kristy paints low-maintenance colour that grows out beautifully — think sun-kissed, never stripey. Ask about a gloss to keep it glassy.",
+    specs: ["Balayage", "Foils", "Blondes"],
+  },
+  {
+    id: "persia",
+    name: "Persia",
+    role: "Stylist & Curl Specialist",
+    initial: "Pe",
+    color: "#5a4a86",
+    hair: 0x2a2230,
+    smock: C.wine,
     skin: 0x8d5a44,
-    bio: "Sharp, considered cuts with a soft finish. Juno reads your hair's natural movement first, then cuts to it — curls, cowlicks and all. Blow-dry lessons on request.",
-    specs: ["Precision cuts", "Curly hair", "Styling"],
+    bio: "Curls, coils and textured hair are Persia's specialty — cut dry, styled to suit your routine, never fought against. Treatments to keep everything bouncy and healthy.",
+    specs: ["Curly hair", "Cuts", "Treatments"],
   },
 ];
 
@@ -146,9 +157,9 @@ function canvasTex(draw, w = 256, h = 256, repeat) {
 
 const wallTex = canvasTex((x, w, h) => {
   const g = x.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, "#5a57a0"); // periwinkle top
-  g.addColorStop(0.5, "#46376c");
-  g.addColorStop(1, "#3c2b37"); // plum bottom
+  g.addColorStop(0, "#7c79c6"); // periwinkle top
+  g.addColorStop(0.5, "#605191");
+  g.addColorStop(1, "#574455"); // plum bottom
   x.fillStyle = g;
   x.fillRect(0, 0, w, h);
 }, 16, 256);
@@ -169,7 +180,7 @@ const mustardCheck = canvasTex((x, w, h) => {
   const s = w / n;
   for (let i = 0; i < n; i++)
     for (let j = 0; j < n; j++) {
-      x.fillStyle = (i + j) % 2 ? "#ded663" : "#faf9f5";
+      x.fillStyle = (i + j) % 2 ? "#ded663" : "#f3c9da";
       x.fillRect(i * s, j * s, s, s);
     }
 }, 256, 256, [3, 2]);
@@ -189,9 +200,38 @@ const neonTex = (text) =>
     x.fillText(text, w / 2, h / 2 + 6);
   }, 512, 256);
 
+/* floating, always-visible 3D tag (camera-facing sprite) */
+function makeLabel(text, sx = 2.6, sy = 0.8) {
+  const tex = canvasTex((x, w, h) => {
+    x.clearRect(0, 0, w, h);
+    const r = 56;
+    const pad = 14;
+    x.fillStyle = "#43323a";
+    if (x.roundRect) {
+      x.beginPath();
+      x.roundRect(pad, h / 2 - r, w - pad * 2, r * 2, r);
+      x.fill();
+    } else {
+      x.fillRect(pad, h / 2 - r, w - pad * 2, r * 2);
+    }
+    x.font = "600 60px 'Space Grotesk', system-ui, sans-serif";
+    x.textAlign = "center";
+    x.textBaseline = "middle";
+    x.fillStyle = "#ded663";
+    x.fillText(text, w / 2, h / 2 + 2);
+  }, 512, 160);
+  const sp = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })
+  );
+  sp.scale.set(sx, sy, 1);
+  sp.renderOrder = 999;
+  return sp;
+}
+
 /* ====================== interactivity registry ====================== */
 const interactables = [];
 const interactableSet = new Set();
+const floaters = [];
 function markInteractive(root, data) {
   root.userData = Object.assign({ interactive: true, hover: 0 }, data);
   interactables.push(root);
@@ -215,7 +255,7 @@ scene.add(room);
 // floor
 const floor = new THREE.Mesh(
   new THREE.BoxGeometry(15, 0.4, 13),
-  clay(0x2c2330, { roughness: 0.7 })
+  clay(0xe7dbc6, { roughness: 0.85 })
 );
 floor.position.y = -0.2;
 floor.receiveShadow = true;
@@ -370,7 +410,7 @@ function makePlant(scale = 1) {
 }
 
 /* ---- stations along the back wall ---- */
-const stationX = [-4.3, 0, 4.3];
+const stationX = [-5.0, -1.7, 1.7, 5.0];
 STYLISTS.forEach((s, i) => {
   const x = stationX[i];
 
@@ -404,6 +444,10 @@ STYLISTS.forEach((s, i) => {
   room.add(slot);
   markInteractive(slot, { action: "stylist", id: s.id, label: `${s.name} — ${s.role}` });
 
+  const tag = makeLabel(s.name, 1.5, 0.46);
+  tag.position.set(0, 2.95, 0);
+  slot.add(tag);
+
   // warm station glow for night
   const pl = new THREE.PointLight(0xffd27a, 0, 6, 2);
   pl.position.set(x, 3, -5);
@@ -432,7 +476,7 @@ STYLISTS.forEach((s, i) => {
 /* ---- reception desk (opens the service menu) ---- */
 {
   const desk = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.5, 1.2), clay(C.plum));
+  const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.5, 1.2), clay(0x6a4f5e));
   body.position.y = 0.75;
   desk.add(body);
   const front = new THREE.Mesh(
@@ -445,16 +489,41 @@ STYLISTS.forEach((s, i) => {
   const top = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.14, 1.4), clay(C.mustard));
   top.position.y = 1.55;
   desk.add(top);
-  // little till + bell
-  const till = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.45), clay(0x2a2230));
-  till.position.set(-0.8, 1.78, 0);
-  desk.add(till);
-  const bell = new THREE.Mesh(new THREE.SphereGeometry(0.16, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2), clay(0xcf3f5a));
-  bell.position.set(0.7, 1.7, 0.1);
+
+  // cash register — big & bright, with a glowing screen, so it's easy to spot
+  const reg = new THREE.Group();
+  const regBody = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.6, 0.72), clay(C.mustard));
+  regBody.position.y = 0.3;
+  const screen = new THREE.Mesh(
+    new THREE.BoxGeometry(0.74, 0.46, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0x1f1b29, emissive: 0x7fa8ff, emissiveIntensity: 0.6, roughness: 0.4 })
+  );
+  screen.position.set(0, 0.64, -0.2);
+  screen.rotation.x = -0.42;
+  const keys = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.1, 0.4), clay(C.off));
+  keys.position.set(0, 0.2, 0.2);
+  reg.add(regBody, screen, keys);
+  reg.position.set(-0.85, 1.62, 0);
+  desk.add(reg);
+
+  const bell = new THREE.Mesh(
+    new THREE.SphereGeometry(0.16, 18, 14, 0, Math.PI * 2, 0, Math.PI / 2),
+    clay(0xcf3f5a)
+  );
+  bell.position.set(0.85, 1.7, 0.15);
   desk.add(bell);
+
   shade(desk);
-  desk.position.set(4.2, 0, 3.4);
-  desk.rotation.y = -0.5;
+
+  // floating, always-visible "the menu" tag
+  const menuLabel = makeLabel("✦ the menu ✦", 2.9, 0.85);
+  menuLabel.position.set(0, 2.75, 0);
+  menuLabel.userData.baseY = 2.75;
+  desk.add(menuLabel);
+  floaters.push(menuLabel);
+
+  desk.position.set(3.8, 0, 3.5);
+  desk.rotation.y = -0.55;
   room.add(desk);
   markInteractive(desk, { action: "services", label: "the menu — services & prices" });
 }
@@ -561,8 +630,10 @@ let confetti;
 }
 
 /* ====================== lights ====================== */
-const hemi = new THREE.HemisphereLight(0xfff0e0, 0x4a3a55, 0.85);
+const hemi = new THREE.HemisphereLight(0xfff3e2, 0x6a5a72, 1.15);
 scene.add(hemi);
+const amb = new THREE.AmbientLight(0xfff4e6, 0.3);
+scene.add(amb);
 const key = new THREE.DirectionalLight(0xfff1dd, 1.7);
 key.position.set(7, 12, 8);
 key.castShadow = true;
@@ -601,11 +672,12 @@ function toggleTheme() {
   document.documentElement.classList.toggle("dark", night);
 }
 function applyTheme(t) {
-  hemi.intensity = lerp(0.85, 0.22, t);
-  key.intensity = lerp(1.7, 0.4, t);
-  fill.intensity = lerp(0.35, 0.18, t);
-  renderer.toneMappingExposure = lerp(1.05, 1.2, t);
-  bloom.strength = lerp(0.45, 1.05, t);
+  hemi.intensity = lerp(1.15, 0.3, t);
+  key.intensity = lerp(2.1, 0.55, t);
+  fill.intensity = lerp(0.55, 0.22, t);
+  amb.intensity = lerp(0.3, 0.14, t);
+  renderer.toneMappingExposure = lerp(1.18, 1.22, t);
+  bloom.strength = lerp(0.4, 1.05, t);
   skyUniforms.top.value.copy(dayTop).lerp(nightTop, t);
   skyUniforms.bottom.value.copy(dayBot).lerp(nightBot, t);
   starMat.opacity = t;
@@ -822,8 +894,11 @@ function tick() {
       const s = 1 + o.userData.hover * 0.07;
       o.scale.setScalar(s);
       o.position.y = Math.sin(t * 1.6 + o.position.x) * 0.04 + o.userData.hover * 0.08;
+    } else if (o.userData.action === "services") {
+      o.scale.setScalar(1 + o.userData.hover * 0.04);
     }
   }
+  for (const f of floaters) f.position.y = f.userData.baseY + Math.sin(t * 2) * 0.07;
 
   // neon flicker at night
   if (neonMat) neonMat.opacity = lerp(0.4, 1, themeT) * (0.92 + Math.sin(t * 22) * 0.04 * themeT);
