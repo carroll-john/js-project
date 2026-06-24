@@ -698,7 +698,7 @@ function makePlantAt(x, z, sc) {
   p.position.set(x, 0, z);
   return p;
 }
-room.add(makePlantAt(6.2, -4, 1.2));
+room.add(makePlantAt(6.3, 4.3, 1.2));
 room.add(makePlantAt(-6.4, 4.6, 1.1));
 room.add(makePlantAt(2, 4.6, 1));
 
