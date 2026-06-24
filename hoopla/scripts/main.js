@@ -328,27 +328,8 @@ const warmLights = []; // station point lights
 let neonMat;
 let starMat;
 
-/* disco mode (night) — party hats on the staff */
-const partyHats = [];
-const PARTY_COLORS = [0xff4f9a, 0x4fd0ff, 0xffe14f, 0xb06bff, 0x5fd08f, 0xff8a3d];
-function addPartyHat(g, y) {
-  const col = PARTY_COLORS[partyHats.length % PARTY_COLORS.length];
-  const hat = new THREE.Mesh(
-    new THREE.ConeGeometry(0.2, 0.46, 18),
-    new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0, roughness: 0.5 })
-  );
-  hat.position.set(0.02, y, 0.02);
-  hat.rotation.z = 0.12;
-  hat.visible = false;
-  const pom = new THREE.Mesh(
-    new THREE.SphereGeometry(0.07, 12, 12),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0 })
-  );
-  pom.position.set(0.05, y + 0.25, 0.05);
-  pom.visible = false;
-  g.add(hat, pom);
-  partyHats.push(hat, pom);
-}
+/* disco mode (night) — the staff become disco divas: their outfits shimmer */
+const discoOutfits = [];
 
 /* ====================== build the room ====================== */
 const room = new THREE.Group();
@@ -445,6 +426,7 @@ function makeStylist(s, seated = false) {
   const smockMat = s.leopard
     ? new THREE.MeshStandardMaterial({ map: leopardTex, roughness: 0.85, metalness: 0 })
     : clay(s.smock);
+  discoOutfits.push({ mat: smockMat, h: discoOutfits.length / 6 });
 
   if (seated) {
     for (const dx of [-0.16, 0.16]) {
@@ -478,7 +460,6 @@ function makeStylist(s, seated = false) {
     );
     hair.position.y = 2.08;
     g.add(hair);
-    addPartyHat(g, 2.42);
     return shade(g);
   }
 
@@ -509,7 +490,6 @@ function makeStylist(s, seated = false) {
   );
   hair.position.y = 2.24;
   g.add(hair);
-  addPartyHat(g, 2.6);
   return shade(g);
 }
 
@@ -1158,9 +1138,12 @@ function tick() {
   } else {
     discoLights.forEach((l) => (l.intensity = 0));
   }
-  for (const h of partyHats) {
-    h.visible = showDisco;
-    h.material.emissiveIntensity = themeT * 0.6;
+  // disco divas — the staff's outfits shimmer & catch the lights
+  for (const o of discoOutfits) {
+    o.mat.metalness = themeT * 0.55;
+    o.mat.roughness = lerp(0.9, 0.25, themeT);
+    o.mat.emissive.setHSL((t * 0.12 + o.h) % 1, 0.7, 0.5);
+    o.mat.emissiveIntensity = themeT * (0.18 + 0.18 * Math.sin(t * 5 + o.h * 18));
   }
 
   controls.update();
