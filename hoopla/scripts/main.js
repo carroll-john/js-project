@@ -41,7 +41,7 @@ const STYLISTS = [
     role: "Owner & Creative Director",
     initial: "E",
     color: "#43323a",
-    hair: 0x2a2230,
+    hair: 0xd76a7a,
     smock: C.mustard,
     leopard: true,
     skin: 0xe8c4a8,
@@ -54,7 +54,7 @@ const STYLISTS = [
     role: "Senior Stylist",
     initial: "P",
     color: "#7a2f4a",
-    hair: 0x8d3d63,
+    hair: 0x5a3a26,
     smock: C.plum,
     skin: 0xc9956f,
     bio: "Sharp, considered cuts with a soft finish. Paige reads your hair's natural movement first, then cuts to it — curls, cowlicks and all. Lived-in colour is her happy place.",
@@ -78,7 +78,7 @@ const STYLISTS = [
     role: "Stylist & Curl Specialist",
     initial: "Pe",
     color: "#5a4a86",
-    hair: 0x2a2230,
+    hair: 0x4a3120,
     smock: C.wine,
     skin: 0x8d5a44,
     bio: "Curls, coils and textured hair are Persia's specialty — cut dry, styled to suit your routine, never fought against. Treatments to keep everything bouncy and healthy.",
@@ -90,7 +90,7 @@ const STYLISTS = [
     role: "Apprentice",
     initial: "L",
     color: "#8a7012",
-    hair: 0x4a3a2f,
+    hair: 0xbf5d2a,
     smock: C.mustard,
     skin: 0xe8c4a8,
     bio: "One of Hoopla's apprentices — learning from the best and already a dab hand at a glossy blow-dry. You'll often find Lana minding the front desk and keeping the coffee (and good vibes) flowing.",
@@ -102,7 +102,7 @@ const STYLISTS = [
     role: "Apprentice",
     initial: "D",
     color: "#a85a3f",
-    hair: 0x8a3d2a,
+    hair: 0xddb968,
     smock: 0xd9876a,
     skin: 0xc9956f,
     bio: "Hoopla's other apprentice, soaking up everything colour and cutting. Book a supervised apprentice service for great hair at a friendly price — she's one to watch.",
@@ -492,7 +492,7 @@ function placePerson(member, x, z, rotY, seated = false) {
   room.add(slot);
   markInteractive(slot, { action: "stylist", id: member.id, label: `${member.name} — ${member.role}` });
   const tag = makeLabel(member.name, 1.5, 0.46);
-  tag.position.set(0, seated ? 2.45 : 2.95, 0);
+  tag.position.set(0, seated ? 2.85 : 2.95, 0);
   slot.add(tag);
   return slot;
 }
