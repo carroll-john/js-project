@@ -365,27 +365,32 @@ leftSkirt.position.set(-7.3, 0.55, 0);
 room.add(leftSkirt);
 
 /* ---- scalloped mustard oval mirror ---- */
-function makeMirror() {
+// one continuous wall-length vanity mirror with mustard frame + bulbs
+function makeWallMirror(width, height) {
   const g = new THREE.Group();
+  // mustard frame slab behind the glass
+  const frame = new THREE.Mesh(rbox(width + 0.5, height + 0.5, 0.18, 0.16), clay(C.mustard));
+  frame.position.z = -0.06;
+  g.add(frame);
+  // long mirror glass
   const glass = new THREE.Mesh(
-    new THREE.CircleGeometry(1, 48),
+    rbox(width, height, 0.08, 0.1),
     new THREE.MeshStandardMaterial({ color: 0x3a3656, roughness: 0.12, metalness: 0.7 })
   );
-  glass.scale.set(1, 1.62, 1);
   g.add(glass);
-
-  const rx = 1.08;
-  const ry = 1.74;
-  const n = 30;
-  const bulbGeo = new THREE.SphereGeometry(0.13, 14, 14);
+  // vanity bulbs along top & bottom edges (glow at night)
+  const bulbGeo = new THREE.SphereGeometry(0.12, 14, 14);
   const mat = clay(C.mustard, { emissive: C.mustard, emissiveIntensity: 0.12 });
   glowMats.push(mat);
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2;
-    const b = new THREE.Mesh(bulbGeo, mat);
-    b.position.set(Math.cos(a) * rx, Math.sin(a) * ry, 0.04);
-    b.castShadow = true;
-    g.add(b);
+  const n = Math.round(width / 0.8);
+  for (let i = 0; i <= n; i++) {
+    const px = -width / 2 + (i / n) * width;
+    for (const py of [height / 2 + 0.2, -height / 2 - 0.2]) {
+      const b = new THREE.Mesh(bulbGeo, mat);
+      b.position.set(px, py, 0.1);
+      b.castShadow = true;
+      g.add(b);
+    }
   }
   return g;
 }
@@ -535,16 +540,17 @@ function makePlant(scale = 1) {
   return shade(g);
 }
 
+/* ---- one continuous mirror running the back wall ---- */
+const wallMirror = makeWallMirror(13.4, 2.6);
+wallMirror.position.set(0, 2.9, -5.8);
+room.add(wallMirror);
+
 /* ---- stations along the back wall ---- */
 const stationX = [-5.0, -1.7, 1.7, 5.0];
 const stationIds = ["delia", "paige", "kristy", "persia"];
 stationIds.forEach((id, i) => {
   const s = STYLISTS.find((m) => m.id === id);
   const x = stationX[i];
-
-  const mirror = makeMirror();
-  mirror.position.set(x, 3.1, -5.78);
-  room.add(mirror);
 
   const counter = new THREE.Mesh(rbox(2.1, 0.18, 0.7, 0.07), clay(C.pink));
   counter.position.set(x, 1.05, -5.4);
@@ -704,7 +710,8 @@ room.add(makePlantAt(2, 4.6, 1));
 
 // mustard shelf on back wall
 const shelf = makeShelf();
-shelf.position.set(-6.2, 2.4, -5.8);
+shelf.position.set(-7.15, 2.4, -2.2);
+shelf.rotation.y = Math.PI / 2; // mount on the left wall (clear of the mirror)
 room.add(shelf);
 
 /* ====================== sky + stars + confetti ====================== */
