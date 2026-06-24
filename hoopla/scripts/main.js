@@ -38,15 +38,15 @@ const STYLISTS = [
   {
     id: "emma",
     name: "Emma",
-    role: "Owner & Creative Director",
+    role: "Owner",
     initial: "E",
     color: "#43323a",
     hair: 0xd76a7a,
     smock: C.mustard,
     leopard: true,
     skin: 0xe8c4a8,
-    bio: "Hoopla's owner and the reason it all feels like a celebration. Emma has led the team to multiple Salon of the Year wins and lives for a transformation that makes you stand a little taller.",
-    specs: ["Transformations", "Colour correction", "Editorial"],
+    bio: "Hoopla's owner and the heart of the place. Emma built the salon around a simple idea — great hair should feel like a celebration — and lives for a cut or colour that makes you stand a little taller.",
+    specs: ["Cuts", "Styling", "Editorial"],
   },
   {
     id: "paige",
@@ -328,6 +328,9 @@ const warmLights = []; // station point lights
 let neonMat;
 let starMat;
 
+/* disco mode (night) — the staff become disco divas: their outfits shimmer */
+const discoOutfits = [];
+
 /* ====================== build the room ====================== */
 const room = new THREE.Group();
 scene.add(room);
@@ -423,6 +426,7 @@ function makeStylist(s, seated = false) {
   const smockMat = s.leopard
     ? new THREE.MeshStandardMaterial({ map: leopardTex, roughness: 0.85, metalness: 0 })
     : clay(s.smock);
+  discoOutfits.push({ mat: smockMat, h: discoOutfits.length / 6 });
 
   if (seated) {
     for (const dx of [-0.16, 0.16]) {
@@ -497,7 +501,7 @@ function placePerson(member, x, z, rotY, seated = false) {
   slot.position.set(x, 0, z);
   slot.rotation.y = rotY;
   room.add(slot);
-  markInteractive(slot, { action: "stylist", id: member.id, label: `${member.name} — ${member.role}` });
+  markInteractive(slot, { action: "stylist", id: member.id, label: `${member.name} — ${member.role}`, baseRotY: rotY, seated });
   const tag = makeLabel(member.name, 1.5, 0.46);
   tag.position.set(0, seated ? 2.85 : 2.95, 0);
   slot.add(tag);
@@ -578,7 +582,7 @@ stationIds.forEach((id, i) => {
   slot.position.copy(stylist.position);
   stylist.position.set(0, 0, 0);
   room.add(slot);
-  markInteractive(slot, { action: "stylist", id: s.id, label: `${s.name} — ${s.role}` });
+  markInteractive(slot, { action: "stylist", id: s.id, label: `${s.name} — ${s.role}`, baseRotY: 0, seated: false });
 
   const tag = makeLabel(s.name, 1.5, 0.46);
   tag.position.set(0, 2.95, 0);
@@ -709,6 +713,57 @@ const shelf = makeShelf();
 shelf.position.set(-7.15, 2.4, -2.2);
 shelf.rotation.y = Math.PI / 2; // mount on the left wall (clear of the mirror)
 room.add(shelf);
+
+/* ====================== disco (night-mode party) ====================== */
+const danceFloor = new THREE.Group();
+const danceTiles = [];
+{
+  const tileGeo = new THREE.PlaneGeometry(0.74, 0.74);
+  const N = 6;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x0a0a0a,
+        emissive: 0xffffff,
+        emissiveIntensity: 0,
+        roughness: 0.4,
+      });
+      const tile = new THREE.Mesh(tileGeo, mat);
+      tile.rotation.x = -Math.PI / 2;
+      tile.position.set((i - (N - 1) / 2) * 0.8, 0.05, (j - (N - 1) / 2) * 0.8);
+      danceFloor.add(tile);
+      danceTiles.push({ mat, h: (i * N + j) / (N * N) });
+    }
+  }
+}
+danceFloor.position.set(0, 0, 0.6);
+danceFloor.visible = false;
+room.add(danceFloor);
+
+const discoRig = new THREE.Group();
+const discoBall = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(0.55, 1),
+  new THREE.MeshStandardMaterial({
+    color: 0xcfd6e6,
+    metalness: 0.9,
+    roughness: 0.22,
+    flatShading: true,
+    emissive: 0x9aa2c0,
+    emissiveIntensity: 0,
+  })
+);
+const discoCord = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 3.4, 8), clay(0x222028));
+discoCord.position.y = 2.25;
+discoRig.add(discoBall, discoCord);
+discoRig.position.set(0, 8.5, 0.6);
+discoRig.visible = false;
+room.add(discoRig);
+
+const discoLights = [0xff4f9a, 0x4fd0ff, 0xffe14f].map((c) => {
+  const l = new THREE.PointLight(c, 0, 18, 2);
+  room.add(l);
+  return l;
+});
 
 /* ====================== sky + stars + confetti ====================== */
 const skyUniforms = {
@@ -1029,15 +1084,27 @@ function tick() {
   // smooth theme transition
   themeT += ((night ? 1 : 0) - themeT) * Math.min(dt * 3, 1);
   applyTheme(themeT);
+  const showDisco = themeT > 0.01;
 
   // hover/idle animation on interactables
   for (const o of interactables) {
     const target = o.userData.target || 0;
     o.userData.hover += (target - o.userData.hover) * Math.min(dt * 8, 1);
     if (o.userData.action === "stylist") {
-      const s = 1 + o.userData.hover * 0.07;
-      o.scale.setScalar(s);
-      o.position.y = Math.sin(t * 1.6 + o.position.x) * 0.04 + o.userData.hover * 0.08;
+      o.scale.setScalar(1 + o.userData.hover * 0.07);
+      const base = o.userData.baseRotY || 0;
+      if (showDisco) {
+        // bust a move
+        const beat = t * 4 + o.position.x * 1.7;
+        const hop = o.userData.seated ? 0.05 : 0.2;
+        o.position.y = Math.abs(Math.sin(beat)) * hop * themeT + o.userData.hover * 0.08;
+        o.rotation.y = base + Math.sin(beat * 0.5) * 0.3 * themeT;
+        o.rotation.z = Math.sin(beat) * 0.07 * themeT;
+      } else {
+        o.position.y = Math.sin(t * 1.6 + o.position.x) * 0.04 + o.userData.hover * 0.08;
+        o.rotation.y = base;
+        o.rotation.z = 0;
+      }
     } else if (o.userData.action === "services") {
       o.scale.setScalar(1 + o.userData.hover * 0.04);
     }
@@ -1061,6 +1128,33 @@ function tick() {
     }
     p.needsUpdate = true;
     confetti.rotation.y = t * 0.02;
+  }
+
+  // disco mode (active in night)
+  danceFloor.visible = showDisco;
+  discoRig.visible = showDisco;
+  if (showDisco) {
+    discoRig.position.y = lerp(8.5, 4.6, themeT);
+    discoBall.rotation.y += dt * 0.8;
+    discoBall.material.emissiveIntensity = themeT * 0.5;
+    for (const tile of danceTiles) {
+      tile.mat.emissive.setHSL((t * 0.08 + tile.h) % 1, 0.85, 0.55);
+      tile.mat.emissiveIntensity = themeT * (0.45 + 0.55 * Math.sin(t * 3 + tile.h * 12));
+    }
+    discoLights.forEach((l, i) => {
+      const a = t * 0.9 + (i / 3) * Math.PI * 2;
+      l.position.set(Math.cos(a) * 4.2, 3.6 + Math.sin(t * 1.6 + i) * 1.1, 0.6 + Math.sin(a) * 4.2);
+      l.intensity = themeT * 2.4;
+    });
+  } else {
+    discoLights.forEach((l) => (l.intensity = 0));
+  }
+  // disco divas — steady metallic sheen that catches the sweeping lights (no flashing)
+  for (const o of discoOutfits) {
+    o.mat.metalness = themeT * 0.5;
+    o.mat.roughness = lerp(0.9, 0.3, themeT);
+    o.mat.emissive.setHSL(o.h, 0.35, 0.38);
+    o.mat.emissiveIntensity = themeT * 0.09;
   }
 
   controls.update();
