@@ -1149,12 +1149,12 @@ function tick() {
   } else {
     discoLights.forEach((l) => (l.intensity = 0));
   }
-  // disco divas — the staff's outfits shimmer & catch the lights
+  // disco divas — steady metallic sheen that catches the sweeping lights (no flashing)
   for (const o of discoOutfits) {
-    o.mat.metalness = themeT * 0.55;
-    o.mat.roughness = lerp(0.9, 0.25, themeT);
-    o.mat.emissive.setHSL((t * 0.12 + o.h) % 1, 0.7, 0.5);
-    o.mat.emissiveIntensity = themeT * (0.18 + 0.18 * Math.sin(t * 5 + o.h * 18));
+    o.mat.metalness = themeT * 0.5;
+    o.mat.roughness = lerp(0.9, 0.3, themeT);
+    o.mat.emissive.setHSL(o.h, 0.35, 0.38);
+    o.mat.emissiveIntensity = themeT * 0.09;
   }
 
   controls.update();
