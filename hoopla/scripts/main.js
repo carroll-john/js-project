@@ -206,6 +206,16 @@ const neonTex = (text) =>
     x.fillText(text, w / 2, h / 2 + 6);
   }, 512, 256);
 
+// little "menu" plaque texture for the desk sign
+const menuSignTex = canvasTex((x, w, h) => {
+  x.clearRect(0, 0, w, h);
+  x.font = "600 78px 'Space Grotesk', system-ui, sans-serif";
+  x.textAlign = "center";
+  x.textBaseline = "middle";
+  x.fillStyle = "#ded663";
+  x.fillText("menu", w / 2, h / 2);
+}, 256, 160);
+
 /* floating, always-visible 3D tag (camera-facing sprite) */
 function makeLabel(text, sx = 2.6, sy = 0.8) {
   const tex = canvasTex((x, w, h) => {
@@ -227,17 +237,16 @@ function makeLabel(text, sx = 2.6, sy = 0.8) {
     x.fillText(text, w / 2, h / 2 + 2);
   }, 512, 160);
   const sp = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })
+    new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true, depthWrite: false })
   );
   sp.scale.set(sx, sy, 1);
-  sp.renderOrder = 999;
+  sp.renderOrder = 1;
   return sp;
 }
 
 /* ====================== interactivity registry ====================== */
 const interactables = [];
 const interactableSet = new Set();
-const floaters = [];
 function markInteractive(root, data) {
   root.userData = Object.assign({ interactive: true, hover: 0 }, data);
   interactables.push(root);
@@ -331,14 +340,17 @@ function makeMirror() {
 /* ---- salon chair ---- */
 function makeChair() {
   const g = new THREE.Group();
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.62, 0.16, 24), clay(0x26222c));
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.62, 0.16, 24), clay(0x564f5c));
   base.position.y = 0.08;
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.7, 16), clay(0x3a3440));
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.09, 0.09, 0.7, 16),
+    clay(0x9a94a0, { roughness: 0.45, metalness: 0.35 })
+  );
   pole.position.y = 0.5;
-  const seat = new THREE.Mesh(new THREE.SphereGeometry(0.48, 28, 20), clay(C.plum));
+  const seat = new THREE.Mesh(new THREE.SphereGeometry(0.48, 28, 20), clay(0xd884a4));
   seat.scale.set(1, 0.44, 1);
   seat.position.y = 0.95;
-  const backrest = new THREE.Mesh(rbox(0.9, 1.05, 0.22, 0.1), clay(C.plum));
+  const backrest = new THREE.Mesh(rbox(0.9, 1.05, 0.22, 0.1), clay(0xd884a4));
   backrest.position.set(0, 1.55, -0.34);
   g.add(base, pole, seat, backrest);
   return shade(g);
@@ -520,14 +532,22 @@ STYLISTS.forEach((s, i) => {
   bell.position.set(0.85, 1.7, 0.15);
   desk.add(bell);
 
-  shade(desk);
+  // small "menu" sign standing on the counter (part of the scene)
+  const sign = new THREE.Group();
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.42, 10), clay(C.plum));
+  post.position.y = 0.21;
+  const plate = new THREE.Mesh(rbox(1.0, 0.52, 0.06, 0.08), clay(C.plum));
+  plate.position.y = 0.66;
+  const plateText = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.88, 0.42),
+    new THREE.MeshBasicMaterial({ map: menuSignTex, transparent: true })
+  );
+  plateText.position.set(0, 0.66, 0.032);
+  sign.add(post, plate, plateText);
+  sign.position.set(0.7, 1.62, 0.4);
+  desk.add(sign);
 
-  // floating, always-visible "the menu" tag
-  const menuLabel = makeLabel("✦ the menu ✦", 2.9, 0.85);
-  menuLabel.position.set(0, 2.75, 0);
-  menuLabel.userData.baseY = 2.75;
-  desk.add(menuLabel);
-  floaters.push(menuLabel);
+  shade(desk);
 
   desk.position.set(3.8, 0, 3.5);
   desk.rotation.y = -0.55;
@@ -906,7 +926,6 @@ function tick() {
       o.scale.setScalar(1 + o.userData.hover * 0.04);
     }
   }
-  for (const f of floaters) f.position.y = f.userData.baseY + Math.sin(t * 2) * 0.07;
 
   // neon flicker at night
   if (neonMat) neonMat.opacity = lerp(0.4, 1, themeT) * (0.92 + Math.sin(t * 22) * 0.04 * themeT);
