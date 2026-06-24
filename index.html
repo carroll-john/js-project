@@ -1,29 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link href="styles/style.css" rel="stylesheet" type="text/css" />
-    <title>My test page</title>
-    <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#02020a" />
+    <title>Particle Universe — WebGL / Three.js</title>
+    <meta
+      name="description"
+      content="An interactive GPU particle universe that morphs between a spiral galaxy, sphere, torus, double helix and wave field. Built with Three.js, custom GLSL shaders and bloom."
+    />
+    <link rel="stylesheet" href="styles/style.css" />
+
+    <!-- Three.js (ES modules) loaded from CDN via import map -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
   </head>
 
   <body>
-    <h1>Mozilla is cool</h1>
-    <img src="images/images.jpg" alt="The Firefox logo: a flaming fox surrounding the Earth.">
+    <canvas id="scene"></canvas>
 
-    <p>At Mozilla, we’re a global community of</p>
+    <!-- Loading / boot overlay -->
+    <div id="loader" class="loader">
+      <div class="loader__ring"></div>
+      <p class="loader__text">summoning particles…</p>
+    </div>
 
-    <ul> <!-- changed to list in the tutorial -->
-      <li>technologists</li>
-      <li>thinkers</li>
-      <li>builders</li>
-    </ul>
+    <!-- Heads-up display -->
+    <header class="hud hud--top">
+      <h1 class="title">PARTICLE&nbsp;UNIVERSE</h1>
+      <p class="subtitle">80,000 GPU particles · custom GLSL shaders · bloom</p>
+    </header>
 
-    <p>working together to keep the Internet alive and accessible, so people worldwide can be informed contributors and creators of the Web. We believe this act of human collaboration across an open platform is essential to individual growth and our collective future.</p>
+    <footer class="hud hud--bottom">
+      <nav id="shapes" class="shapes" aria-label="Particle formations"></nav>
+      <p class="hint">drag to orbit · scroll to zoom · particles auto-morph</p>
+    </footer>
 
-    <p>Read the <a href="https://www.mozilla.org/en-US/about/manifesto/">Mozilla Manifesto</a> to learn even more about the values and principles that guide the pursuit of our mission.</p>
-<button>Change user</button>
-  <script src="scripts/main.js"></script>
+    <!-- Fallback shown if WebGL is unavailable -->
+    <noscript>
+      <div class="fallback">This experience needs JavaScript and WebGL.</div>
+    </noscript>
+
+    <script type="module" src="scripts/main.js"></script>
   </body>
 </html>
-jssjdks
