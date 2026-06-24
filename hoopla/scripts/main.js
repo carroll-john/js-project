@@ -38,15 +38,15 @@ const STYLISTS = [
   {
     id: "emma",
     name: "Emma",
-    role: "Owner & Creative Director",
+    role: "Owner",
     initial: "E",
     color: "#43323a",
     hair: 0xd76a7a,
     smock: C.mustard,
     leopard: true,
     skin: 0xe8c4a8,
-    bio: "Hoopla's owner and the reason it all feels like a celebration. Emma has led the team to multiple Salon of the Year wins and lives for a transformation that makes you stand a little taller.",
-    specs: ["Transformations", "Colour correction", "Editorial"],
+    bio: "Hoopla's owner and the heart of the place. Emma built the salon around a simple idea — great hair should feel like a celebration — and lives for a cut or colour that makes you stand a little taller.",
+    specs: ["Cuts", "Styling", "Editorial"],
   },
   {
     id: "paige",
@@ -501,7 +501,7 @@ function placePerson(member, x, z, rotY, seated = false) {
   slot.position.set(x, 0, z);
   slot.rotation.y = rotY;
   room.add(slot);
-  markInteractive(slot, { action: "stylist", id: member.id, label: `${member.name} — ${member.role}` });
+  markInteractive(slot, { action: "stylist", id: member.id, label: `${member.name} — ${member.role}`, baseRotY: rotY, seated });
   const tag = makeLabel(member.name, 1.5, 0.46);
   tag.position.set(0, seated ? 2.85 : 2.95, 0);
   slot.add(tag);
@@ -582,7 +582,7 @@ stationIds.forEach((id, i) => {
   slot.position.copy(stylist.position);
   stylist.position.set(0, 0, 0);
   room.add(slot);
-  markInteractive(slot, { action: "stylist", id: s.id, label: `${s.name} — ${s.role}` });
+  markInteractive(slot, { action: "stylist", id: s.id, label: `${s.name} — ${s.role}`, baseRotY: 0, seated: false });
 
   const tag = makeLabel(s.name, 1.5, 0.46);
   tag.position.set(0, 2.95, 0);
@@ -1084,15 +1084,27 @@ function tick() {
   // smooth theme transition
   themeT += ((night ? 1 : 0) - themeT) * Math.min(dt * 3, 1);
   applyTheme(themeT);
+  const showDisco = themeT > 0.01;
 
   // hover/idle animation on interactables
   for (const o of interactables) {
     const target = o.userData.target || 0;
     o.userData.hover += (target - o.userData.hover) * Math.min(dt * 8, 1);
     if (o.userData.action === "stylist") {
-      const s = 1 + o.userData.hover * 0.07;
-      o.scale.setScalar(s);
-      o.position.y = Math.sin(t * 1.6 + o.position.x) * 0.04 + o.userData.hover * 0.08;
+      o.scale.setScalar(1 + o.userData.hover * 0.07);
+      const base = o.userData.baseRotY || 0;
+      if (showDisco) {
+        // bust a move
+        const beat = t * 4 + o.position.x * 1.7;
+        const hop = o.userData.seated ? 0.05 : 0.2;
+        o.position.y = Math.abs(Math.sin(beat)) * hop * themeT + o.userData.hover * 0.08;
+        o.rotation.y = base + Math.sin(beat * 0.5) * 0.3 * themeT;
+        o.rotation.z = Math.sin(beat) * 0.07 * themeT;
+      } else {
+        o.position.y = Math.sin(t * 1.6 + o.position.x) * 0.04 + o.userData.hover * 0.08;
+        o.rotation.y = base;
+        o.rotation.z = 0;
+      }
     } else if (o.userData.action === "services") {
       o.scale.setScalar(1 + o.userData.hover * 0.04);
     }
@@ -1119,7 +1131,6 @@ function tick() {
   }
 
   // disco mode (active in night)
-  const showDisco = themeT > 0.01;
   danceFloor.visible = showDisco;
   discoRig.visible = showDisco;
   if (showDisco) {
