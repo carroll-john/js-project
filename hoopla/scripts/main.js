@@ -281,6 +281,29 @@ const terrazzoTex = canvasTex((x, w, h) => {
   }
 }, 512, 512, [3, 3]);
 
+// sequin sheet (tinted per diva at night)
+const sequinTex = canvasTex((x, w, h) => {
+  x.fillStyle = "#33333c";
+  x.fillRect(0, 0, w, h);
+  const n = 16;
+  const s = w / n;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const cx = (i + 0.5) * s + (Math.random() - 0.5) * 2;
+      const cy = (j + 0.5) * s + (Math.random() - 0.5) * 2;
+      const r = s * 0.44;
+      const b = 150 + Math.random() * 105;
+      const g = x.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+      g.addColorStop(0, `rgb(${b | 0},${b | 0},${b | 0})`);
+      g.addColorStop(1, `rgb(${(b * 0.35) | 0},${(b * 0.35) | 0},${(b * 0.4) | 0})`);
+      x.fillStyle = g;
+      x.beginPath();
+      x.arc(cx, cy, r, 0, 6.28);
+      x.fill();
+    }
+  }
+}, 256, 256, [4, 5]);
+
 /* floating, always-visible 3D tag (camera-facing sprite) */
 function makeLabel(text, sx = 2.6, sy = 0.8) {
   const tex = canvasTex((x, w, h) => {
@@ -328,8 +351,10 @@ const warmLights = []; // station point lights
 let neonMat;
 let starMat;
 
-/* disco mode (night) — the staff become disco divas: their outfits shimmer */
+/* disco mode (night) — the staff change into sequined disco outfits */
 const discoOutfits = [];
+let discoOn = false;
+const DISCO_TINTS = [0xd9b24a, 0xc8ccd6, 0xe0609a, 0x6ac0e0, 0xb98ae0, 0xe0905a];
 
 /* ====================== build the room ====================== */
 const room = new THREE.Group();
@@ -426,7 +451,13 @@ function makeStylist(s, seated = false) {
   const smockMat = s.leopard
     ? new THREE.MeshStandardMaterial({ map: leopardTex, roughness: 0.85, metalness: 0 })
     : clay(s.smock);
-  discoOutfits.push({ mat: smockMat, h: discoOutfits.length / 6 });
+  discoOutfits.push({
+    mat: smockMat,
+    dayMap: s.leopard ? leopardTex : null,
+    dayColor: s.leopard ? 0xffffff : s.smock,
+    dayRough: s.leopard ? 0.85 : 0.95,
+    discoTint: DISCO_TINTS[discoOutfits.length % DISCO_TINTS.length],
+  });
 
   if (seated) {
     for (const dx of [-0.16, 0.16]) {
@@ -1149,12 +1180,28 @@ function tick() {
   } else {
     discoLights.forEach((l) => (l.intensity = 0));
   }
-  // disco divas — steady metallic sheen that catches the sweeping lights (no flashing)
-  for (const o of discoOutfits) {
-    o.mat.metalness = themeT * 0.5;
-    o.mat.roughness = lerp(0.9, 0.3, themeT);
-    o.mat.emissive.setHSL(o.h, 0.35, 0.38);
-    o.mat.emissiveIntensity = themeT * 0.09;
+  // disco divas — swap into sequined disco outfits at night (steady, no flashing)
+  const wantDisco = themeT > 0.5;
+  if (wantDisco !== discoOn) {
+    discoOn = wantDisco;
+    for (const o of discoOutfits) {
+      if (wantDisco) {
+        o.mat.map = sequinTex;
+        o.mat.color.set(o.discoTint);
+        o.mat.emissive.set(o.discoTint);
+        o.mat.emissiveIntensity = 0.12;
+        o.mat.metalness = 0.55;
+        o.mat.roughness = 0.35;
+      } else {
+        o.mat.map = o.dayMap;
+        o.mat.color.set(o.dayColor);
+        o.mat.emissive.set(0x000000);
+        o.mat.emissiveIntensity = 0;
+        o.mat.metalness = 0;
+        o.mat.roughness = o.dayRough;
+      }
+      o.mat.needsUpdate = true;
+    }
   }
 
   controls.update();
