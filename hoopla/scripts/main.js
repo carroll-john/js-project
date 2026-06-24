@@ -31,8 +31,9 @@ const C = {
   wine: 0x7a2f4a,
 };
 
-/* ---- Team & menu. Real team names below; bios & prices are placeholders to
- * confirm/replace before launch. ------------------------------------------- */
+/* ---- Team & menu. Real names; Emma relaxes on the couch, Lana minds the
+ * front desk and Delia works a station (both apprentices). Bios & prices are
+ * placeholders to confirm/replace before launch. --------------------------- */
 const STYLISTS = [
   {
     id: "emma",
@@ -42,6 +43,7 @@ const STYLISTS = [
     color: "#43323a",
     hair: 0x2a2230,
     smock: C.mustard,
+    leopard: true,
     skin: 0xe8c4a8,
     bio: "Hoopla's owner and the reason it all feels like a celebration. Emma has led the team to multiple Salon of the Year wins and lives for a transformation that makes you stand a little taller.",
     specs: ["Transformations", "Colour correction", "Editorial"],
@@ -81,6 +83,30 @@ const STYLISTS = [
     skin: 0x8d5a44,
     bio: "Curls, coils and textured hair are Persia's specialty — cut dry, styled to suit your routine, never fought against. Treatments to keep everything bouncy and healthy.",
     specs: ["Curly hair", "Cuts", "Treatments"],
+  },
+  {
+    id: "lana",
+    name: "Lana",
+    role: "Apprentice",
+    initial: "L",
+    color: "#8a7012",
+    hair: 0x4a3a2f,
+    smock: C.mustard,
+    skin: 0xe8c4a8,
+    bio: "One of Hoopla's apprentices — learning from the best and already a dab hand at a glossy blow-dry. You'll often find Lana minding the front desk and keeping the coffee (and good vibes) flowing.",
+    specs: ["Blow-dries", "Front of house", "Treatments"],
+  },
+  {
+    id: "delia",
+    name: "Delia",
+    role: "Apprentice",
+    initial: "D",
+    color: "#a85a3f",
+    hair: 0x8a3d2a,
+    smock: 0xd9876a,
+    skin: 0xc9956f,
+    bio: "Hoopla's other apprentice, soaking up everything colour and cutting. Book a supervised apprentice service for great hair at a friendly price — she's one to watch.",
+    specs: ["Apprentice cuts", "Colour assisting", "Blow-dries"],
   },
 ];
 
@@ -215,6 +241,33 @@ const menuSignTex = canvasTex((x, w, h) => {
   x.fillStyle = "#ded663";
   x.fillText("menu", w / 2, h / 2);
 }, 256, 160);
+
+// leopard print (for Emma's smock)
+const leopardTex = canvasTex((x, w, h) => {
+  const g = x.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, "#e3b86d");
+  g.addColorStop(1, "#cf9b4f");
+  x.fillStyle = g;
+  x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 70; i++) {
+    const cx = Math.random() * w;
+    const cy = Math.random() * h;
+    const r = 9 + Math.random() * 12;
+    x.fillStyle = "rgba(150,92,38,0.45)";
+    x.beginPath();
+    x.ellipse(cx, cy, r * 0.7, r * 0.55, Math.random() * 6.28, 0, 6.28);
+    x.fill();
+    x.strokeStyle = "#3a2414";
+    x.lineWidth = 3;
+    const segs = 5 + Math.floor(Math.random() * 3);
+    for (let k = 0; k < segs; k++) {
+      const a = (k / segs) * 6.28 + Math.random() * 0.4;
+      x.beginPath();
+      x.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.85, 3.2, a + 1.1, a + 2.7);
+      x.stroke();
+    }
+  }
+}, 256, 256, [2, 3]);
 
 /* floating, always-visible 3D tag (camera-facing sprite) */
 function makeLabel(text, sx = 2.6, sy = 0.8) {
@@ -357,23 +410,62 @@ function makeChair() {
 }
 
 /* ---- stylist character ---- */
-function makeStylist(s) {
+function makeStylist(s, seated = false) {
   const g = new THREE.Group();
   const legMat = clay(0x2f2933);
+  const smockMat = s.leopard
+    ? new THREE.MeshStandardMaterial({ map: leopardTex, roughness: 0.85, metalness: 0 })
+    : clay(s.smock);
+
+  if (seated) {
+    for (const dx of [-0.16, 0.16]) {
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.62, 14), legMat);
+      shin.position.set(dx, 0.31, 0.5);
+      g.add(shin);
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.55, 14), legMat);
+      thigh.rotation.x = 1.35;
+      thigh.position.set(dx, 0.72, 0.27);
+      g.add(thigh);
+    }
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.5, 1.0, 24), smockMat);
+    body.position.y = 1.22;
+    g.add(body);
+    const collar = new THREE.Mesh(new THREE.SphereGeometry(0.36, 20, 16), smockMat);
+    collar.position.y = 1.66;
+    collar.scale.y = 0.6;
+    g.add(collar);
+    for (const dx of [-0.42, 0.42]) {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.85, 12), smockMat);
+      arm.position.set(dx, 1.2, 0.06);
+      arm.rotation.z = dx < 0 ? 0.18 : -0.18;
+      g.add(arm);
+    }
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.33, 28, 24), clay(s.skin));
+    head.position.y = 2.02;
+    g.add(head);
+    const hair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.37, 28, 24, 0, Math.PI * 2, 0, Math.PI * 0.66),
+      clay(s.hair)
+    );
+    hair.position.y = 2.08;
+    g.add(hair);
+    return shade(g);
+  }
+
   for (const dx of [-0.16, 0.16]) {
     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.12, 0.7, 14), legMat);
     leg.position.set(dx, 0.36, 0);
     g.add(leg);
   }
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.5, 1.15, 24), clay(s.smock));
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.5, 1.15, 24), smockMat);
   body.position.y = 1.28;
   g.add(body);
-  const collar = new THREE.Mesh(new THREE.SphereGeometry(0.36, 20, 16), clay(s.smock));
+  const collar = new THREE.Mesh(new THREE.SphereGeometry(0.36, 20, 16), smockMat);
   collar.position.y = 1.78;
   collar.scale.y = 0.6;
   g.add(collar);
   for (const dx of [-0.42, 0.42]) {
-    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1, 12), clay(s.smock));
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1, 12), smockMat);
     arm.position.set(dx, 1.28, 0.04);
     arm.rotation.z = dx < 0 ? 0.22 : -0.22;
     g.add(arm);
@@ -388,6 +480,21 @@ function makeStylist(s) {
   hair.position.y = 2.24;
   g.add(hair);
   return shade(g);
+}
+
+// place a clickable team member (slot supports the hover/idle animation)
+function placePerson(member, x, z, rotY, seated = false) {
+  const person = makeStylist(member, seated);
+  const slot = new THREE.Group();
+  slot.add(person);
+  slot.position.set(x, 0, z);
+  slot.rotation.y = rotY;
+  room.add(slot);
+  markInteractive(slot, { action: "stylist", id: member.id, label: `${member.name} — ${member.role}` });
+  const tag = makeLabel(member.name, 1.5, 0.46);
+  tag.position.set(0, seated ? 2.45 : 2.95, 0);
+  slot.add(tag);
+  return slot;
 }
 
 /* ---- floating mustard shelf with bottles ---- */
@@ -430,7 +537,9 @@ function makePlant(scale = 1) {
 
 /* ---- stations along the back wall ---- */
 const stationX = [-5.0, -1.7, 1.7, 5.0];
-STYLISTS.forEach((s, i) => {
+const stationIds = ["delia", "paige", "kristy", "persia"];
+stationIds.forEach((id, i) => {
+  const s = STYLISTS.find((m) => m.id === id);
   const x = stationX[i];
 
   const mirror = makeMirror();
@@ -579,6 +688,10 @@ STYLISTS.forEach((s, i) => {
   wine.position.set(-3.4, 0.63, 2.1);
   room.add(wine);
 }
+
+/* ---- Emma relaxing on the couch + Lana behind the front desk ---- */
+placePerson(STYLISTS.find((m) => m.id === "emma"), -4.6, 3.4, 0.5, true);
+placePerson(STYLISTS.find((m) => m.id === "lana"), 4.4, 2.5, -0.55, false);
 
 function makePlantAt(x, z, sc) {
   const p = makePlant(sc);
