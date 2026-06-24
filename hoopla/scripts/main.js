@@ -544,28 +544,39 @@ function placePerson(member, x, z, rotY, seated = false) {
 function makeBanana() {
   const g = new THREE.Group();
   const curve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0.0, 0.08, 0),
-    new THREE.Vector3(-0.16, 0.6, 0),
-    new THREE.Vector3(-0.2, 1.15, 0),
-    new THREE.Vector3(-0.12, 1.65, 0),
-    new THREE.Vector3(0.1, 2.0, 0),
+    new THREE.Vector3(0.0, 0.22, 0),
+    new THREE.Vector3(-0.16, 0.7, 0),
+    new THREE.Vector3(-0.2, 1.2, 0),
+    new THREE.Vector3(-0.12, 1.7, 0),
+    new THREE.Vector3(0.1, 2.05, 0),
   ]);
-  const body = new THREE.Mesh(
-    new THREE.TubeGeometry(curve, 48, 0.2, 16, false),
-    new THREE.MeshStandardMaterial({ color: 0xf2d23a, roughness: 0.5, emissive: 0x5a4a10, emissiveIntensity: 0.18 })
-  );
+  const yellow = new THREE.MeshStandardMaterial({ color: 0xf2d23a, roughness: 0.5, emissive: 0x5a4a10, emissiveIntensity: 0.18 });
+  const body = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.2, 16, false), yellow);
   g.add(body);
+  // rounded caps so the ends aren't open / cut off
+  const p0 = curve.getPoint(0);
+  const p1 = curve.getPoint(1);
+  const capGeo = new THREE.SphereGeometry(0.2, 16, 12);
+  const capB = new THREE.Mesh(capGeo, yellow);
+  capB.position.copy(p0);
+  g.add(capB);
+  const capT = new THREE.Mesh(capGeo, yellow);
+  capT.position.copy(p1);
+  g.add(capT);
+  // brown stem (top) + nub (bottom)
   const tipMat = clay(0x5e421f);
-  const bottom = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.22, 12), tipMat);
-  bottom.rotation.x = Math.PI;
-  g.add(bottom);
-  const top = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 12), tipMat);
-  top.position.set(0.12, 2.08, 0);
-  g.add(top);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.22, 10), tipMat);
+  stem.position.set(p1.x + 0.02, p1.y + 0.18, 0);
+  stem.rotation.z = -0.25;
+  g.add(stem);
+  const nub = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 10), tipMat);
+  nub.position.set(p0.x, p0.y - 0.16, 0);
+  g.add(nub);
+  // cute face
   const eyeMat = clay(0x2a2230);
   for (const dx of [-0.07, 0.07]) {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 10), eyeMat);
-    eye.position.set(dx - 0.16, 1.45, 0.18);
+    eye.position.set(dx - 0.16, 1.45, 0.2);
     g.add(eye);
   }
   return shade(g);
