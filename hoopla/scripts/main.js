@@ -369,7 +369,7 @@ room.add(leftSkirt);
 function makeWallMirror(width, height) {
   const g = new THREE.Group();
   // mustard frame slab behind the glass
-  const frame = new THREE.Mesh(rbox(width + 0.5, height + 0.5, 0.18, 0.16), clay(C.mustard));
+  const frame = new THREE.Mesh(rbox(width + 0.22, height + 0.22, 0.16, 0.09), clay(C.mustard));
   frame.position.z = -0.06;
   g.add(frame);
   // long mirror glass
@@ -385,7 +385,7 @@ function makeWallMirror(width, height) {
   const n = Math.round(width / 0.8);
   for (let i = 0; i <= n; i++) {
     const px = -width / 2 + (i / n) * width;
-    for (const py of [height / 2 + 0.2, -height / 2 - 0.2]) {
+    for (const py of [height / 2 + 0.11, -height / 2 - 0.11]) {
       const b = new THREE.Mesh(bulbGeo, mat);
       b.position.set(px, py, 0.1);
       b.castShadow = true;
