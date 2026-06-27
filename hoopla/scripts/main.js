@@ -40,6 +40,13 @@ $("#menuClose")?.addEventListener("click", () => setMenu(false));
 document.querySelectorAll("#overlayNav a").forEach((a) => a.addEventListener("click", () => setMenu(false)));
 $("#brand")?.addEventListener("click", () => setMenu(false));
 
+/* ---------- booking URL: single source of truth (body[data-book-url]) ---------- *
+ * Every [data-book] link also carries the URL inline as a no-JS fallback; this
+ * keeps them all in sync from one place for JS users. To change the booking
+ * provider, update data-book-url on <body> (and the inline hrefs for no-JS). */
+const BOOK_URL = document.body.dataset.bookUrl;
+if (BOOK_URL) document.querySelectorAll("[data-book]").forEach((a) => (a.href = BOOK_URL));
+
 /* ---------- booking analytics (delegated; no-op if no analytics present) ---------- */
 document.addEventListener("click", (e) => {
   const b = e.target.closest && e.target.closest("[data-book]");

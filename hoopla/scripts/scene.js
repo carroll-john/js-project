@@ -7,14 +7,18 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 
 /* ============================================================ *
- * HOOPLA SALON — step inside
- * An orbitable cutaway salon interior. Click a stylist for their
- * bio + booking, click the reception desk for the service menu,
- * tap the neon sign to flip day / night.
+ * HOOPLA SALON — the 3D scene (lazy-loaded by main.js)
  *
- * Visual cues from the real salon: blue->plum gradient walls,
- * scalloped mustard oval mirrors, pink checker tiles, mustard
- * shelves, black & white op-art patterns. UI keeps Hoopla brand.
+ * Talks to the page controller via the `window.hoopla` bridge:
+ *   click a stylist -> onSelect(id)      (controller opens the HTML dialog)
+ *   click the desk  -> onServices()      (controller scrolls to the menu)
+ *   tap the neon    -> onToggleTheme()   (controller flips .dark + night)
+ *   controller drives night/disco back via setNight(bool).
+ * See hoopla/README.md for the full architecture + "how to edit" guide.
+ *
+ * EDITABLE CONFIG is all up top: C (palette), STYLISTS (team visuals),
+ * STATIONS + the Emma/Lana placements, DISCO_TINTS. Everything from
+ * "build the room" down is scene machinery.
  * ============================================================ */
 
 const C = {
@@ -23,92 +27,22 @@ const C = {
   plum: 0x43323a,
   off: 0xfaf9f5,
   indigo: 0x55539a,
-  midwall: 0x47376a,
   pink: 0xe283ab,
-  pinkPale: 0xf3c9da,
   wine: 0x7a2f4a,
 };
 
-/* ---- Team & menu. Real names; Emma relaxes on the couch, Lana minds the
- * front desk and Delia works a station (both apprentices). Bios & prices are
- * placeholders to confirm/replace before launch. --------------------------- */
+/* ---- Team visuals for the 3D ONLY. The canonical content (bios, specialties,
+ * prices, hours) lives in index.html — do not duplicate it here. To add a
+ * stylist: add a card in index.html AND a row here + a placement (STATIONS
+ * below, or the Emma/Lana placePerson calls). ------------------------------- */
 const STYLISTS = [
-  {
-    id: "emma",
-    name: "Emma",
-    role: "Owner",
-    initial: "E",
-    color: "#43323a",
-    hair: 0xd76a7a,
-    smock: C.mustard,
-    leopard: true,
-    skin: 0xe8c4a8,
-    bio: "Hoopla's owner and the heart of the place. Emma built the salon around a simple idea — great hair should feel like a celebration — and lives for a cut or colour that makes you stand a little taller.",
-    specs: ["Cuts", "Styling", "Editorial"],
-  },
-  {
-    id: "paige",
-    name: "Paige",
-    role: "Senior Stylist",
-    initial: "P",
-    color: "#7a2f4a",
-    hair: 0x5a3a26,
-    smock: C.plum,
-    skin: 0xc9956f,
-    bio: "Sharp, considered cuts with a soft finish. Paige reads your hair's natural movement first, then cuts to it — curls, cowlicks and all. Lived-in colour is her happy place.",
-    specs: ["Precision cuts", "Lived-in colour", "Styling"],
-  },
-  {
-    id: "kristy",
-    name: "Kristy",
-    role: "Colour Specialist",
-    initial: "K",
-    color: "#3a5a78",
-    hair: 0xc9a14a,
-    smock: C.indigo,
-    skin: 0xead0bb,
-    bio: "Balayage whisperer. Kristy paints low-maintenance colour that grows out beautifully — think sun-kissed, never stripey. Ask about a gloss to keep it glassy.",
-    specs: ["Balayage", "Foils", "Blondes"],
-  },
-  {
-    id: "persia",
-    name: "Persia",
-    role: "Stylist & Curl Specialist",
-    initial: "Pe",
-    color: "#5a4a86",
-    hair: 0x4a3120,
-    smock: C.wine,
-    skin: 0x8d5a44,
-    bio: "Curls, coils and textured hair are Persia's specialty — cut dry, styled to suit your routine, never fought against. Treatments to keep everything bouncy and healthy.",
-    specs: ["Curly hair", "Cuts", "Treatments"],
-  },
-  {
-    id: "lana",
-    name: "Lana",
-    role: "Apprentice",
-    initial: "L",
-    color: "#8a7012",
-    hair: 0xbf5d2a,
-    smock: C.mustard,
-    skin: 0xe8c4a8,
-    bio: "One of Hoopla's apprentices — learning from the best and already a dab hand at a glossy blow-dry. You'll often find Lana minding the front desk and keeping the coffee (and good vibes) flowing.",
-    specs: ["Blow-dries", "Front of house", "Treatments"],
-  },
-  {
-    id: "delia",
-    name: "Delia",
-    role: "Apprentice",
-    initial: "D",
-    color: "#a85a3f",
-    hair: 0xddb968,
-    smock: 0xd9876a,
-    skin: 0xc9956f,
-    bio: "Hoopla's other apprentice, soaking up everything colour and cutting. Book a supervised apprentice service for great hair at a friendly price — she's one to watch.",
-    specs: ["Apprentice cuts", "Colour assisting", "Blow-dries"],
-  },
+  { id: "emma",   name: "Emma",   role: "Owner",                     hair: 0xd76a7a, smock: C.mustard, skin: 0xe8c4a8, leopard: true },
+  { id: "paige",  name: "Paige",  role: "Senior Stylist",            hair: 0x5a3a26, smock: C.plum,    skin: 0xc9956f },
+  { id: "kristy", name: "Kristy", role: "Colour Specialist",         hair: 0xc9a14a, smock: C.indigo,  skin: 0xead0bb },
+  { id: "persia", name: "Persia", role: "Stylist & Curl Specialist", hair: 0x4a3120, smock: C.wine,    skin: 0x8d5a44 },
+  { id: "lana",   name: "Lana",   role: "Apprentice",                hair: 0xbf5d2a, smock: C.mustard, skin: 0xe8c4a8 },
+  { id: "delia",  name: "Delia",  role: "Apprentice",                hair: 0xddb968, smock: 0xd9876a,  skin: 0xc9956f },
 ];
-
-// (service list & bios now live in index.html — the 3D only needs the visual fields above)
 
 /* ====================== renderer / scene / camera ====================== */
 const canvas = document.getElementById("scene");
@@ -617,12 +551,15 @@ const wallMirror = makeWallMirror(13.4, 2.6);
 wallMirror.position.set(0, 2.9, -5.8);
 room.add(wallMirror);
 
-/* ---- stations along the back wall ---- */
-const stationX = [-5.0, -1.7, 1.7, 5.0];
-const stationIds = ["delia", "paige", "kristy", "persia"];
-stationIds.forEach((id, i) => {
+/* ---- stations along the back wall (who stands where: id + x position) ---- */
+const STATIONS = [
+  { id: "delia", x: -5.0 },
+  { id: "paige", x: -1.7 },
+  { id: "kristy", x: 1.7 },
+  { id: "persia", x: 5.0 },
+];
+STATIONS.forEach(({ id, x }, i) => {
   const s = STYLISTS.find((m) => m.id === id);
-  const x = stationX[i];
 
   const counter = new THREE.Mesh(rbox(2.1, 0.18, 0.7, 0.07), clay(C.pink));
   counter.position.set(x, 1.05, -5.4);
@@ -1046,13 +983,19 @@ window.addEventListener("resize", resize);
 resize();
 
 const clock = new THREE.Clock();
+let lastThemeT = -1;
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
 
-  // smooth theme transition
-  themeT += ((night ? 1 : 0) - themeT) * Math.min(dt * 3, 1);
-  applyTheme(themeT);
+  // smooth theme transition — only re-apply lights/materials while it's changing
+  const themeTarget = night ? 1 : 0;
+  themeT += (themeTarget - themeT) * Math.min(dt * 3, 1);
+  if (Math.abs(themeT - themeTarget) < 0.001) themeT = themeTarget;
+  if (themeT !== lastThemeT) {
+    applyTheme(themeT);
+    lastThemeT = themeT;
+  }
   const showDisco = themeT > 0.01;
 
   // hover/idle animation on interactables
@@ -1079,8 +1022,8 @@ function tick() {
     }
   }
 
-  // neon flicker at night
-  if (neonMat) neonMat.opacity = lerp(0.4, 1, themeT) * (0.92 + Math.sin(t * 22) * 0.04 * themeT);
+  // neon flicker at night (skip entirely in daylight)
+  if (neonMat && themeT > 0.01) neonMat.opacity = lerp(0.4, 1, themeT) * (0.92 + Math.sin(t * 22) * 0.04 * themeT);
 
   // confetti drift
   if (confetti) {

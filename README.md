@@ -50,3 +50,9 @@ Then open <http://localhost:8000>.
 | Galaxy/Sphere/…   | Morph to that formation         |
 
 Built with vanilla JS — no bundler, no dependencies to install.
+
+## Also in this repo
+
+- [`hoopla/`](hoopla/) — **Hoopla Salon** website: a real, mobile-first salon
+  site with a progressively-enhanced interactive 3D salon. See
+  [`hoopla/README.md`](hoopla/README.md) for its architecture and edit guide.

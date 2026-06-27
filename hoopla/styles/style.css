@@ -98,11 +98,6 @@ a {
   font-size: clamp(1.1rem, 3.6vw, 1.5rem);
   padding: 20px 52px;
 }
-.btn--ghost {
-  background: transparent;
-  color: var(--plum);
-  box-shadow: inset 0 0 0 2px var(--plum);
-}
 
 /* ---------- header ---------- */
 .site-header {
