@@ -1,0 +1,1178 @@
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+
+/* ============================================================ *
+ * HOOPLA SALON — step inside
+ * An orbitable cutaway salon interior. Click a stylist for their
+ * bio + booking, click the reception desk for the service menu,
+ * tap the neon sign to flip day / night.
+ *
+ * Visual cues from the real salon: blue->plum gradient walls,
+ * scalloped mustard oval mirrors, pink checker tiles, mustard
+ * shelves, black & white op-art patterns. UI keeps Hoopla brand.
+ * ============================================================ */
+
+const C = {
+  lime: 0xddeab3,
+  mustard: 0xded663,
+  plum: 0x43323a,
+  off: 0xfaf9f5,
+  indigo: 0x55539a,
+  midwall: 0x47376a,
+  pink: 0xe283ab,
+  pinkPale: 0xf3c9da,
+  wine: 0x7a2f4a,
+};
+
+/* ---- Team & menu. Real names; Emma relaxes on the couch, Lana minds the
+ * front desk and Delia works a station (both apprentices). Bios & prices are
+ * placeholders to confirm/replace before launch. --------------------------- */
+const STYLISTS = [
+  {
+    id: "emma",
+    name: "Emma",
+    role: "Owner",
+    initial: "E",
+    color: "#43323a",
+    hair: 0xd76a7a,
+    smock: C.mustard,
+    leopard: true,
+    skin: 0xe8c4a8,
+    bio: "Hoopla's owner and the heart of the place. Emma built the salon around a simple idea — great hair should feel like a celebration — and lives for a cut or colour that makes you stand a little taller.",
+    specs: ["Cuts", "Styling", "Editorial"],
+  },
+  {
+    id: "paige",
+    name: "Paige",
+    role: "Senior Stylist",
+    initial: "P",
+    color: "#7a2f4a",
+    hair: 0x5a3a26,
+    smock: C.plum,
+    skin: 0xc9956f,
+    bio: "Sharp, considered cuts with a soft finish. Paige reads your hair's natural movement first, then cuts to it — curls, cowlicks and all. Lived-in colour is her happy place.",
+    specs: ["Precision cuts", "Lived-in colour", "Styling"],
+  },
+  {
+    id: "kristy",
+    name: "Kristy",
+    role: "Colour Specialist",
+    initial: "K",
+    color: "#3a5a78",
+    hair: 0xc9a14a,
+    smock: C.indigo,
+    skin: 0xead0bb,
+    bio: "Balayage whisperer. Kristy paints low-maintenance colour that grows out beautifully — think sun-kissed, never stripey. Ask about a gloss to keep it glassy.",
+    specs: ["Balayage", "Foils", "Blondes"],
+  },
+  {
+    id: "persia",
+    name: "Persia",
+    role: "Stylist & Curl Specialist",
+    initial: "Pe",
+    color: "#5a4a86",
+    hair: 0x4a3120,
+    smock: C.wine,
+    skin: 0x8d5a44,
+    bio: "Curls, coils and textured hair are Persia's specialty — cut dry, styled to suit your routine, never fought against. Treatments to keep everything bouncy and healthy.",
+    specs: ["Curly hair", "Cuts", "Treatments"],
+  },
+  {
+    id: "lana",
+    name: "Lana",
+    role: "Apprentice",
+    initial: "L",
+    color: "#8a7012",
+    hair: 0xbf5d2a,
+    smock: C.mustard,
+    skin: 0xe8c4a8,
+    bio: "One of Hoopla's apprentices — learning from the best and already a dab hand at a glossy blow-dry. You'll often find Lana minding the front desk and keeping the coffee (and good vibes) flowing.",
+    specs: ["Blow-dries", "Front of house", "Treatments"],
+  },
+  {
+    id: "delia",
+    name: "Delia",
+    role: "Apprentice",
+    initial: "D",
+    color: "#a85a3f",
+    hair: 0xddb968,
+    smock: 0xd9876a,
+    skin: 0xc9956f,
+    bio: "Hoopla's other apprentice, soaking up everything colour and cutting. Book a supervised apprentice service for great hair at a friendly price — she's one to watch.",
+    specs: ["Apprentice cuts", "Colour assisting", "Blow-dries"],
+  },
+];
+
+// (service list & bios now live in index.html — the 3D only needs the visual fields above)
+
+/* ====================== renderer / scene / camera ====================== */
+const canvas = document.getElementById("scene");
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+} catch (err) {
+  const l = document.getElementById("loader");
+  l.querySelector(".loader__hoop").style.display = "none";
+  l.querySelector(".loader__text").textContent = "WebGL isn't available on this device.";
+  throw err;
+}
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x3a2f4a, 28, 58);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+camera.position.set(8.5, 7, 11);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.enablePan = false;
+controls.minDistance = 6.5;
+controls.maxDistance = 19;
+controls.minPolarAngle = 0.25;
+controls.maxPolarAngle = 1.46;
+controls.target.set(0, 1.7, -0.5);
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.55;
+
+/* ====================== helpers ====================== */
+function clay(color, extra = {}) {
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.95, metalness: 0, ...extra });
+}
+// soft, rounded "clay" box
+function rbox(w, h, d, r = 0.1, seg = 5) {
+  const rr = Math.max(0.01, Math.min(r, Math.min(w, h, d) / 2 - 0.01));
+  return new RoundedBoxGeometry(w, h, d, seg, rr);
+}
+function shade(obj) {
+  obj.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    }
+  });
+  return obj;
+}
+
+function canvasTex(draw, w = 256, h = 256, repeat) {
+  const cv = document.createElement("canvas");
+  cv.width = w;
+  cv.height = h;
+  draw(cv.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  if (repeat) {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(repeat[0], repeat[1]);
+  }
+  return t;
+}
+
+const wallTex = canvasTex((x, w, h) => {
+  const g = x.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, "#7c79c6"); // periwinkle top
+  g.addColorStop(0.5, "#605191");
+  g.addColorStop(1, "#574455"); // plum bottom
+  x.fillStyle = g;
+  x.fillRect(0, 0, w, h);
+}, 16, 256);
+
+const pinkChecker = canvasTex((x, w, h) => {
+  const n = 6;
+  const s = w / n;
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++) {
+      x.fillStyle = (i + j) % 2 ? "#e283ab" : "#f3c9da";
+      x.fillRect(i * s, j * s, s, s);
+    }
+}, 256, 256, [10, 1]);
+
+const neonTex = (text) =>
+  canvasTex((x, w, h) => {
+    x.clearRect(0, 0, w, h);
+    x.font = "120px 'Shadows Into Light Two', cursive";
+    x.textAlign = "center";
+    x.textBaseline = "middle";
+    x.shadowColor = "#fff2a8";
+    x.shadowBlur = 26;
+    x.fillStyle = "#fff6c4";
+    x.fillText(text, w / 2, h / 2 + 6);
+    x.shadowBlur = 10;
+    x.fillStyle = "#ded663";
+    x.fillText(text, w / 2, h / 2 + 6);
+  }, 512, 256);
+
+// little "menu" plaque texture for the desk sign
+const menuSignTex = canvasTex((x, w, h) => {
+  x.clearRect(0, 0, w, h);
+  x.font = "600 78px 'Space Grotesk', system-ui, sans-serif";
+  x.textAlign = "center";
+  x.textBaseline = "middle";
+  x.fillStyle = "#ded663";
+  x.fillText("menu", w / 2, h / 2);
+}, 256, 160);
+
+// leopard print (for Emma's smock)
+const leopardTex = canvasTex((x, w, h) => {
+  const g = x.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, "#e3b86d");
+  g.addColorStop(1, "#cf9b4f");
+  x.fillStyle = g;
+  x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 70; i++) {
+    const cx = Math.random() * w;
+    const cy = Math.random() * h;
+    const r = 9 + Math.random() * 12;
+    x.fillStyle = "rgba(150,92,38,0.45)";
+    x.beginPath();
+    x.ellipse(cx, cy, r * 0.7, r * 0.55, Math.random() * 6.28, 0, 6.28);
+    x.fill();
+    x.strokeStyle = "#3a2414";
+    x.lineWidth = 3;
+    const segs = 5 + Math.floor(Math.random() * 3);
+    for (let k = 0; k < segs; k++) {
+      const a = (k / segs) * 6.28 + Math.random() * 0.4;
+      x.beginPath();
+      x.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.85, 3.2, a + 1.1, a + 2.7);
+      x.stroke();
+    }
+  }
+}, 256, 256, [2, 3]);
+
+// terrazzo / exposed-aggregate floor (cream base, dark speckle)
+const terrazzoTex = canvasTex((x, w, h) => {
+  x.fillStyle = "#e7e0cd";
+  x.fillRect(0, 0, w, h);
+  const chips = ["#272320", "#1b1814", "#39332a", "#272320", "#1b1814", "#8a8276", "#a8a094", "#b9a886", "#5c5246"];
+  for (let i = 0; i < 850; i++) {
+    const cx = Math.random() * w;
+    const cy = Math.random() * h;
+    const r = 1.5 + Math.random() * 5.5;
+    x.fillStyle = chips[(Math.random() * chips.length) | 0];
+    const pts = 5 + ((Math.random() * 3) | 0);
+    x.beginPath();
+    x.moveTo(cx + r, cy);
+    for (let k = 1; k <= pts; k++) {
+      const a = (k / pts) * Math.PI * 2;
+      const rr = r * (0.55 + Math.random() * 0.6);
+      x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+    }
+    x.closePath();
+    x.fill();
+  }
+}, 512, 512, [3, 3]);
+
+// sequin sheet (tinted per diva at night)
+const sequinTex = canvasTex((x, w, h) => {
+  x.fillStyle = "#33333c";
+  x.fillRect(0, 0, w, h);
+  const n = 16;
+  const s = w / n;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const cx = (i + 0.5) * s + (Math.random() - 0.5) * 2;
+      const cy = (j + 0.5) * s + (Math.random() - 0.5) * 2;
+      const r = s * 0.44;
+      const b = 150 + Math.random() * 105;
+      const g = x.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+      g.addColorStop(0, `rgb(${b | 0},${b | 0},${b | 0})`);
+      g.addColorStop(1, `rgb(${(b * 0.35) | 0},${(b * 0.35) | 0},${(b * 0.4) | 0})`);
+      x.fillStyle = g;
+      x.beginPath();
+      x.arc(cx, cy, r, 0, 6.28);
+      x.fill();
+    }
+  }
+}, 256, 256, [4, 5]);
+
+/* floating, always-visible 3D tag (camera-facing sprite) */
+function makeLabel(text, sx = 2.6, sy = 0.8) {
+  const tex = canvasTex((x, w, h) => {
+    x.clearRect(0, 0, w, h);
+    const r = 56;
+    const pad = 14;
+    x.fillStyle = "#43323a";
+    if (x.roundRect) {
+      x.beginPath();
+      x.roundRect(pad, h / 2 - r, w - pad * 2, r * 2, r);
+      x.fill();
+    } else {
+      x.fillRect(pad, h / 2 - r, w - pad * 2, r * 2);
+    }
+    x.font = "600 60px 'Space Grotesk', system-ui, sans-serif";
+    x.textAlign = "center";
+    x.textBaseline = "middle";
+    x.fillStyle = "#faf9f5";
+    x.fillText(text, w / 2, h / 2 + 2);
+  }, 512, 160);
+  const sp = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true, depthWrite: false })
+  );
+  sp.scale.set(sx, sy, 1);
+  sp.renderOrder = 1;
+  return sp;
+}
+
+/* ====================== interactivity registry ====================== */
+const interactables = [];
+const interactableSet = new Set();
+function markInteractive(root, data) {
+  root.userData = Object.assign({ interactive: true, hover: 0 }, data);
+  interactables.push(root);
+  interactableSet.add(root);
+}
+function findRoot(obj) {
+  while (obj && !interactableSet.has(obj)) obj = obj.parent;
+  return obj || null;
+}
+
+/* dynamic materials toggled by day / night */
+const glowMats = []; // scallop frames + bulbs (emissive mustard)
+const warmLights = []; // station point lights
+let neonMat;
+let starMat;
+
+/* disco mode (night) — the staff change into sequined disco outfits */
+const discoOutfits = [];
+let discoOn = false;
+const DISCO_TINTS = [0xd9b24a, 0xc8ccd6, 0xe0609a, 0x6ac0e0, 0xb98ae0, 0xe0905a];
+
+/* ====================== build the room ====================== */
+const room = new THREE.Group();
+scene.add(room);
+
+// floor
+const floor = new THREE.Mesh(
+  rbox(15, 0.4, 13, 0.18),
+  new THREE.MeshStandardMaterial({ map: terrazzoTex, roughness: 0.5, metalness: 0 }) // polished terrazzo
+);
+floor.position.y = -0.2;
+floor.receiveShadow = true;
+room.add(floor);
+
+// walls (back + left) with gradient
+const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 1 });
+const backWall = new THREE.Mesh(new THREE.BoxGeometry(15, 7, 0.3), wallMat);
+backWall.position.set(0, 3.3, -6);
+backWall.receiveShadow = true;
+room.add(backWall);
+
+const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, 7, 13), wallMat);
+leftWall.position.set(-7.35, 3.3, 0);
+leftWall.receiveShadow = true;
+room.add(leftWall);
+
+// pink checker wainscot (skirting band)
+const skirtMat = new THREE.MeshStandardMaterial({ map: pinkChecker, roughness: 0.8 });
+const backSkirt = new THREE.Mesh(new THREE.BoxGeometry(15, 1.1, 0.34), skirtMat);
+backSkirt.position.set(0, 0.55, -5.95);
+room.add(backSkirt);
+const leftSkirt = new THREE.Mesh(
+  new THREE.BoxGeometry(0.34, 1.1, 13),
+  new THREE.MeshStandardMaterial({ map: pinkChecker.clone(), roughness: 0.8 })
+);
+leftSkirt.material.map.repeat.set(10, 1);
+leftSkirt.position.set(-7.3, 0.55, 0);
+room.add(leftSkirt);
+
+/* ---- scalloped mustard oval mirror ---- */
+// one continuous wall-length vanity mirror with mustard frame + bulbs
+function makeWallMirror(width, height) {
+  const g = new THREE.Group();
+  // mustard frame slab behind the glass
+  const frame = new THREE.Mesh(rbox(width + 0.22, height + 0.22, 0.16, 0.09), clay(C.mustard));
+  frame.position.z = -0.06;
+  g.add(frame);
+  // long mirror glass
+  const glass = new THREE.Mesh(
+    rbox(width, height, 0.08, 0.1),
+    new THREE.MeshStandardMaterial({ color: 0x3a3656, roughness: 0.12, metalness: 0.7 })
+  );
+  g.add(glass);
+  // vanity bulbs along top & bottom edges (glow at night)
+  const bulbGeo = new THREE.SphereGeometry(0.12, 14, 14);
+  const mat = clay(C.mustard, { emissive: C.mustard, emissiveIntensity: 0.12 });
+  glowMats.push(mat);
+  const n = Math.round(width / 0.8);
+  for (let i = 0; i <= n; i++) {
+    const px = -width / 2 + (i / n) * width;
+    for (const py of [height / 2 + 0.11, -height / 2 - 0.11]) {
+      const b = new THREE.Mesh(bulbGeo, mat);
+      b.position.set(px, py, 0.1);
+      b.castShadow = true;
+      g.add(b);
+    }
+  }
+  return g;
+}
+
+/* ---- salon chair ---- */
+function makeChair() {
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.62, 0.16, 24), clay(0x564f5c));
+  base.position.y = 0.08;
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.09, 0.09, 0.7, 16),
+    clay(0x9a94a0, { roughness: 0.45, metalness: 0.35 })
+  );
+  pole.position.y = 0.5;
+  const seat = new THREE.Mesh(new THREE.SphereGeometry(0.48, 28, 20), clay(0xd884a4));
+  seat.scale.set(1, 0.44, 1);
+  seat.position.y = 0.95;
+  const backrest = new THREE.Mesh(rbox(0.9, 1.05, 0.22, 0.1), clay(0xd884a4));
+  backrest.position.set(0, 1.55, -0.34);
+  g.add(base, pole, seat, backrest);
+  return shade(g);
+}
+
+/* ---- stylist character ---- */
+function makeStylist(s, seated = false) {
+  const g = new THREE.Group();
+  const legMat = clay(0x2f2933);
+  const smockMat = s.leopard
+    ? new THREE.MeshStandardMaterial({ map: leopardTex, roughness: 0.85, metalness: 0 })
+    : clay(s.smock);
+  discoOutfits.push({
+    mat: smockMat,
+    dayMap: s.leopard ? leopardTex : null,
+    dayColor: s.leopard ? 0xffffff : s.smock,
+    dayRough: s.leopard ? 0.85 : 0.95,
+    discoTint: DISCO_TINTS[discoOutfits.length % DISCO_TINTS.length],
+  });
+
+  if (seated) {
+    for (const dx of [-0.16, 0.16]) {
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.62, 14), legMat);
+      shin.position.set(dx, 0.31, 0.5);
+      g.add(shin);
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.55, 14), legMat);
+      thigh.rotation.x = 1.35;
+      thigh.position.set(dx, 0.72, 0.27);
+      g.add(thigh);
+    }
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.5, 1.0, 24), smockMat);
+    body.position.y = 1.22;
+    g.add(body);
+    const collar = new THREE.Mesh(new THREE.SphereGeometry(0.36, 20, 16), smockMat);
+    collar.position.y = 1.66;
+    collar.scale.y = 0.6;
+    g.add(collar);
+    for (const dx of [-0.42, 0.42]) {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.85, 12), smockMat);
+      arm.position.set(dx, 1.2, 0.06);
+      arm.rotation.z = dx < 0 ? 0.18 : -0.18;
+      g.add(arm);
+    }
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.33, 28, 24), clay(s.skin));
+    head.position.y = 2.02;
+    g.add(head);
+    const hair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.37, 28, 24, 0, Math.PI * 2, 0, Math.PI * 0.66),
+      clay(s.hair)
+    );
+    hair.position.y = 2.08;
+    g.add(hair);
+    return shade(g);
+  }
+
+  for (const dx of [-0.16, 0.16]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.12, 0.7, 14), legMat);
+    leg.position.set(dx, 0.36, 0);
+    g.add(leg);
+  }
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.5, 1.15, 24), smockMat);
+  body.position.y = 1.28;
+  g.add(body);
+  const collar = new THREE.Mesh(new THREE.SphereGeometry(0.36, 20, 16), smockMat);
+  collar.position.y = 1.78;
+  collar.scale.y = 0.6;
+  g.add(collar);
+  for (const dx of [-0.42, 0.42]) {
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1, 12), smockMat);
+    arm.position.set(dx, 1.28, 0.04);
+    arm.rotation.z = dx < 0 ? 0.22 : -0.22;
+    g.add(arm);
+  }
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.33, 28, 24), clay(s.skin));
+  head.position.y = 2.18;
+  g.add(head);
+  const hair = new THREE.Mesh(
+    new THREE.SphereGeometry(0.37, 28, 24, 0, Math.PI * 2, 0, Math.PI * 0.66),
+    clay(s.hair)
+  );
+  hair.position.y = 2.24;
+  g.add(hair);
+  return shade(g);
+}
+
+// place a clickable team member (slot supports the hover/idle animation)
+function placePerson(member, x, z, rotY, seated = false) {
+  const person = makeStylist(member, seated);
+  const slot = new THREE.Group();
+  slot.add(person);
+  slot.position.set(x, 0, z);
+  slot.rotation.y = rotY;
+  room.add(slot);
+  markInteractive(slot, { action: "stylist", id: member.id, label: `${member.name} — ${member.role}`, baseRotY: rotY, seated });
+  slot.userData.figure = person;
+  const tag = makeLabel(member.name, 1.5, 0.46);
+  tag.position.set(0, seated ? 2.85 : 2.95, 0);
+  slot.add(tag);
+  return slot;
+}
+
+// Lana's night-mode alter ego 🍌
+function makeBanana() {
+  const g = new THREE.Group();
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.0, 0.22, 0),
+    new THREE.Vector3(-0.16, 0.7, 0),
+    new THREE.Vector3(-0.2, 1.2, 0),
+    new THREE.Vector3(-0.12, 1.7, 0),
+    new THREE.Vector3(0.1, 2.05, 0),
+  ]);
+  const yellow = new THREE.MeshStandardMaterial({ color: 0xf2d23a, roughness: 0.5, emissive: 0x5a4a10, emissiveIntensity: 0.18 });
+  const body = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.2, 16, false), yellow);
+  g.add(body);
+  // rounded caps so the ends aren't open / cut off
+  const p0 = curve.getPoint(0);
+  const p1 = curve.getPoint(1);
+  const capGeo = new THREE.SphereGeometry(0.2, 16, 12);
+  const capB = new THREE.Mesh(capGeo, yellow);
+  capB.position.copy(p0);
+  g.add(capB);
+  const capT = new THREE.Mesh(capGeo, yellow);
+  capT.position.copy(p1);
+  g.add(capT);
+  // brown stem (top) + nub (bottom)
+  const tipMat = clay(0x5e421f);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.22, 10), tipMat);
+  stem.position.set(p1.x + 0.02, p1.y + 0.18, 0);
+  stem.rotation.z = -0.25;
+  g.add(stem);
+  const nub = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 10), tipMat);
+  nub.position.set(p0.x, p0.y - 0.16, 0);
+  g.add(nub);
+  // cute face
+  const eyeMat = clay(0x2a2230);
+  for (const dx of [-0.07, 0.07]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 10), eyeMat);
+    eye.position.set(dx - 0.16, 1.45, 0.2);
+    g.add(eye);
+  }
+  return shade(g);
+}
+
+/* ---- floating mustard shelf with bottles ---- */
+function makeShelf() {
+  const g = new THREE.Group();
+  const board = new THREE.Mesh(rbox(2.2, 0.1, 0.5, 0.04), clay(C.mustard));
+  board.position.y = 0;
+  g.add(board);
+  const lip = new THREE.Mesh(rbox(2.2, 0.3, 0.08, 0.03), clay(C.mustard));
+  lip.position.set(0, 0.1, 0.21);
+  g.add(lip);
+  const bottleCols = [0x6b4a2f, 0x2a2230, 0xf3c9da, 0x6b4a2f];
+  bottleCols.forEach((col, i) => {
+    const btl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.42, 16), clay(col, { roughness: 0.5 }));
+    btl.position.set(-0.8 + i * 0.55, 0.31, 0);
+    g.add(btl);
+  });
+  return shade(g);
+}
+
+/* ---- potted plant (eco nod) ---- */
+function makePlant(scale = 1) {
+  const g = new THREE.Group();
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.26, 0.5, 18), clay(0xcf7d54));
+  pot.position.y = 0.25;
+  g.add(pot);
+  const leafMat = clay(0x6f9a4a);
+  for (let i = 0; i < 9; i++) {
+    const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 10), leafMat);
+    leaf.scale.set(0.5, 1.5, 0.5);
+    const a = (i / 9) * Math.PI * 2;
+    leaf.position.set(Math.cos(a) * 0.18, 0.8 + Math.random() * 0.5, Math.sin(a) * 0.18);
+    leaf.rotation.z = Math.cos(a) * 0.5;
+    leaf.rotation.x = Math.sin(a) * 0.5;
+    g.add(leaf);
+  }
+  g.scale.setScalar(scale);
+  return shade(g);
+}
+
+/* ---- one continuous mirror running the back wall ---- */
+const wallMirror = makeWallMirror(13.4, 2.6);
+wallMirror.position.set(0, 2.9, -5.8);
+room.add(wallMirror);
+
+/* ---- stations along the back wall ---- */
+const stationX = [-5.0, -1.7, 1.7, 5.0];
+const stationIds = ["delia", "paige", "kristy", "persia"];
+stationIds.forEach((id, i) => {
+  const s = STYLISTS.find((m) => m.id === id);
+  const x = stationX[i];
+
+  const counter = new THREE.Mesh(rbox(2.1, 0.18, 0.7, 0.07), clay(C.pink));
+  counter.position.set(x, 1.05, -5.4);
+  shade(counter);
+  room.add(counter);
+  const legMat = clay(0x3a3440);
+  for (const dx of [-0.85, 0.85]) {
+    const cl = new THREE.Mesh(rbox(0.12, 1.05, 0.12, 0.05), legMat);
+    cl.position.set(x + dx, 0.52, -5.4);
+    room.add(cl);
+  }
+
+  const chair = makeChair();
+  chair.position.set(x, 0, -3.9);
+  chair.rotation.y = Math.PI; // face the mirror
+  room.add(chair);
+
+  const stylist = makeStylist(s);
+  stylist.position.set(x + 1.35, 0, -4.1);
+  stylist.rotation.y = -0.5 + i * 0.2;
+  const slot = new THREE.Group();
+  slot.add(stylist);
+  slot.position.copy(stylist.position);
+  stylist.position.set(0, 0, 0);
+  room.add(slot);
+  markInteractive(slot, { action: "stylist", id: s.id, label: `${s.name} — ${s.role}`, baseRotY: 0, seated: false });
+
+  const tag = makeLabel(s.name, 1.5, 0.46);
+  tag.position.set(0, 2.95, 0);
+  slot.add(tag);
+
+  // warm station glow for night
+  const pl = new THREE.PointLight(0xffd27a, 0, 6, 2);
+  pl.position.set(x, 3, -5);
+  room.add(pl);
+  warmLights.push(pl);
+});
+
+/* ---- neon hoopla sign ---- */
+{
+  neonMat = new THREE.MeshBasicMaterial({ map: neonTex("hoopla"), transparent: true, opacity: 0.4 });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 1.8), neonMat);
+  sign.position.set(0, 5.4, -5.8);
+  room.add(sign);
+  markInteractive(sign, { action: "theme", label: "flip day / night ✦" });
+}
+
+/* ---- decorative hoop (the name motif) ---- */
+{
+  const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.1, 16, 48), clay(C.mustard));
+  hoop.position.set(-6, 4.4, -2);
+  hoop.rotation.y = Math.PI / 2;
+  shade(hoop);
+  room.add(hoop);
+}
+
+/* ---- reception desk: dusty-rose rounded slab on castors ---- */
+{
+  const desk = new THREE.Group();
+  const rose = 0xa96e79;
+
+  // chunky, very rounded slab
+  const body = new THREE.Mesh(rbox(3.2, 1.42, 1.15, 0.4), clay(rose, { roughness: 0.6 }));
+  body.position.y = 0.86;
+  desk.add(body);
+
+  // slightly lighter rounded top where products sit
+  const top = new THREE.Mesh(rbox(3.16, 0.18, 1.12, 0.09), clay(0xbb828d, { roughness: 0.5 }));
+  top.position.y = 1.6;
+  desk.add(top);
+
+  // castor wheels
+  const wheelMat = clay(0x26222c, { roughness: 0.5, metalness: 0.3 });
+  for (const wx of [-1.3, 1.3]) {
+    for (const wz of [-0.42, 0.42]) {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.08, 16), wheelMat);
+      w.rotation.z = Math.PI / 2;
+      w.position.set(wx, 0.11, wz);
+      desk.add(w);
+    }
+  }
+
+  // a few products on top
+  const prodCols = [0x6b4a2f, 0xf3c9da, 0x2a2230, 0xd9c56a];
+  prodCols.forEach((col, i) => {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.3, 14), clay(col, { roughness: 0.5 }));
+    b.position.set(-0.6 + i * 0.32, 1.85, -0.18);
+    desk.add(b);
+  });
+
+  // small "menu" sign standing on the counter
+  const sign = new THREE.Group();
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.42, 10), clay(C.plum));
+  post.position.y = 0.21;
+  const plate = new THREE.Mesh(rbox(1.0, 0.52, 0.06, 0.08), clay(C.plum));
+  plate.position.y = 0.66;
+  const plateText = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.88, 0.42),
+    new THREE.MeshBasicMaterial({ map: menuSignTex, transparent: true })
+  );
+  plateText.position.set(0, 0.66, 0.032);
+  sign.add(post, plate, plateText);
+  sign.position.set(0.78, 1.7, 0.28);
+  desk.add(sign);
+
+  shade(desk);
+
+  desk.position.set(3.8, 0, 3.5);
+  desk.rotation.y = -0.55;
+  room.add(desk);
+  markInteractive(desk, { action: "services", label: "the menu — services & prices" });
+}
+
+/* ---- waiting bench + coffee table ---- */
+{
+  const bench = new THREE.Group();
+  const seat = new THREE.Mesh(rbox(2.6, 0.4, 0.95, 0.16), clay(C.mustard));
+  seat.position.y = 0.5;
+  const back = new THREE.Mesh(rbox(2.6, 0.9, 0.25, 0.1), clay(C.mustard));
+  back.position.set(0, 0.95, -0.35);
+  bench.add(seat, back);
+  shade(bench);
+  bench.position.set(-4.6, 0, 3.4);
+  bench.rotation.y = 0.5;
+  room.add(bench);
+
+  const table = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.42, 0.5, 20), clay(C.off));
+  table.position.set(-3.2, 0.25, 2);
+  shade(table);
+  room.add(table);
+  const coffee = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.16, 14), clay(0xffffff));
+  coffee.position.set(-3.05, 0.58, 2);
+  room.add(coffee);
+  const wine = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.05, 0.26, 14), clay(C.wine, { roughness: 0.4 }));
+  wine.position.set(-3.4, 0.63, 2.1);
+  room.add(wine);
+}
+
+/* ---- Emma relaxing on the couch + Lana behind the front desk ---- */
+placePerson(STYLISTS.find((m) => m.id === "emma"), -4.6, 3.4, 0.5, true);
+const lanaSlot = placePerson(STYLISTS.find((m) => m.id === "lana"), 4.4, 2.5, -0.55, false);
+const lanaBanana = makeBanana();
+lanaBanana.visible = false;
+lanaSlot.add(lanaBanana);
+lanaSlot.userData.banana = lanaBanana;
+
+function makePlantAt(x, z, sc) {
+  const p = makePlant(sc);
+  p.position.set(x, 0, z);
+  return p;
+}
+room.add(makePlantAt(6.3, 4.3, 1.2));
+room.add(makePlantAt(-6.4, 4.6, 1.1));
+room.add(makePlantAt(2, 4.6, 1));
+
+// mustard shelf on back wall
+const shelf = makeShelf();
+shelf.position.set(-7.15, 2.4, -2.2);
+shelf.rotation.y = Math.PI / 2; // mount on the left wall (clear of the mirror)
+room.add(shelf);
+
+/* ====================== disco (night-mode party) ====================== */
+const danceFloor = new THREE.Group();
+const danceTiles = [];
+{
+  const tileGeo = new THREE.PlaneGeometry(0.74, 0.74);
+  const N = 6;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x0a0a0a,
+        emissive: 0xffffff,
+        emissiveIntensity: 0,
+        roughness: 0.4,
+      });
+      const tile = new THREE.Mesh(tileGeo, mat);
+      tile.rotation.x = -Math.PI / 2;
+      tile.position.set((i - (N - 1) / 2) * 0.8, 0.05, (j - (N - 1) / 2) * 0.8);
+      danceFloor.add(tile);
+      danceTiles.push({ mat, h: (i * N + j) / (N * N) });
+    }
+  }
+}
+danceFloor.position.set(0, 0, 0.6);
+danceFloor.visible = false;
+room.add(danceFloor);
+
+const discoRig = new THREE.Group();
+const discoBall = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(0.55, 1),
+  new THREE.MeshStandardMaterial({
+    color: 0xcfd6e6,
+    metalness: 0.9,
+    roughness: 0.22,
+    flatShading: true,
+    emissive: 0x9aa2c0,
+    emissiveIntensity: 0,
+  })
+);
+const discoCord = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 3.4, 8), clay(0x222028));
+discoCord.position.y = 2.25;
+discoRig.add(discoBall, discoCord);
+discoRig.position.set(0, 8.5, 0.6);
+discoRig.visible = false;
+room.add(discoRig);
+
+const discoLights = [0xff4f9a, 0x4fd0ff, 0xffe14f].map((c) => {
+  const l = new THREE.PointLight(c, 0, 18, 2);
+  room.add(l);
+  return l;
+});
+
+/* ====================== sky + stars + confetti ====================== */
+const skyUniforms = {
+  top: { value: new THREE.Color("#f3e7d8") },
+  bottom: { value: new THREE.Color("#cfe0c2") },
+};
+const sky = new THREE.Mesh(
+  new THREE.SphereGeometry(50, 32, 16),
+  new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    uniforms: skyUniforms,
+    vertexShader: `varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: `varying vec3 vP; uniform vec3 top; uniform vec3 bottom;
+      void main(){ float h = clamp(vP.y/50.0*0.5+0.5,0.0,1.0); gl_FragColor = vec4(mix(bottom,top,h),1.0); }`,
+  })
+);
+scene.add(sky);
+
+// stars (visible at night)
+{
+  const n = 600;
+  const pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const r = 40;
+    const th = Math.random() * Math.PI * 2;
+    const ph = Math.acos(2 * Math.random() - 1);
+    pos[i * 3] = r * Math.sin(ph) * Math.cos(th);
+    pos[i * 3 + 1] = Math.abs(r * Math.cos(ph));
+    pos[i * 3 + 2] = r * Math.sin(ph) * Math.sin(th);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  starMat = new THREE.PointsMaterial({ color: 0xfff3c4, size: 0.28, transparent: true, opacity: 0, depthWrite: false });
+  scene.add(new THREE.Points(geo, starMat));
+}
+
+// drifting confetti
+let confetti;
+{
+  const n = 140;
+  const pos = new Float32Array(n * 3);
+  const col = new Float32Array(n * 3);
+  const palette = [new THREE.Color(C.mustard), new THREE.Color(C.pink), new THREE.Color(C.lime), new THREE.Color(0x8fb6ff)];
+  for (let i = 0; i < n; i++) {
+    pos[i * 3] = (Math.random() - 0.5) * 14;
+    pos[i * 3 + 1] = Math.random() * 8;
+    pos[i * 3 + 2] = (Math.random() - 0.5) * 12;
+    const c = palette[(Math.random() * palette.length) | 0];
+    col[i * 3] = c.r;
+    col[i * 3 + 1] = c.g;
+    col[i * 3 + 2] = c.b;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  confetti = new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({ size: 0.12, vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false })
+  );
+  scene.add(confetti);
+}
+
+/* ====================== lights ====================== */
+const hemi = new THREE.HemisphereLight(0xfff3e2, 0x6a5a72, 1.15);
+scene.add(hemi);
+const amb = new THREE.AmbientLight(0xfff4e6, 0.3);
+scene.add(amb);
+const key = new THREE.DirectionalLight(0xfff1dd, 1.7);
+key.position.set(7, 12, 8);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.near = 1;
+key.shadow.camera.far = 40;
+key.shadow.camera.left = -12;
+key.shadow.camera.right = 12;
+key.shadow.camera.top = 12;
+key.shadow.camera.bottom = -12;
+key.shadow.bias = -0.0004;
+key.shadow.radius = 4;
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xbfa8ff, 0.35);
+fill.position.set(-8, 6, 4);
+scene.add(fill);
+
+/* ====================== post-processing ====================== */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.5, 0.6, 0.85);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* ====================== day / night ====================== */
+let night = false;
+let themeT = 0; // 0 day, 1 night (animated)
+const dayTop = new THREE.Color("#f3e7d8");
+const dayBot = new THREE.Color("#cfe0c2");
+const nightTop = new THREE.Color("#191427");
+const nightBot = new THREE.Color("#2c2236");
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+// the controller (main.js) owns the .dark class + toggle button; it drives the scene via setNight
+function setNight(b) {
+  night = b;
+}
+if (window.hoopla) window.hoopla.setNight = setNight;
+function applyTheme(t) {
+  hemi.intensity = lerp(1.15, 0.3, t);
+  key.intensity = lerp(2.1, 0.55, t);
+  fill.intensity = lerp(0.55, 0.22, t);
+  amb.intensity = lerp(0.3, 0.14, t);
+  renderer.toneMappingExposure = lerp(1.18, 1.22, t);
+  bloom.strength = lerp(0.4, 1.05, t);
+  skyUniforms.top.value.copy(dayTop).lerp(nightTop, t);
+  skyUniforms.bottom.value.copy(dayBot).lerp(nightBot, t);
+  starMat.opacity = t;
+  neonMat.opacity = lerp(0.4, 1, t);
+  glowMats.forEach((m) => (m.emissiveIntensity = lerp(0.12, 1.7, t)));
+  warmLights.forEach((p) => (p.intensity = lerp(0, 1.5, t)));
+}
+
+/* ====================== pointer / raycasting ====================== */
+const ray = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const hoverLabel = document.getElementById("hoverLabel");
+let hovered = null;
+let down = null;
+let interacted = false;
+
+function markInteracted() {
+  if (interacted) return;
+  interacted = true;
+  controls.autoRotate = false;
+  document.getElementById("explore")?.classList.add("is-hidden");
+}
+controls.addEventListener("start", markInteracted);
+
+function setPointer(e) {
+  const r = canvas.getBoundingClientRect();
+  pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+}
+function pick() {
+  ray.setFromCamera(pointer, camera);
+  const hits = ray.intersectObjects(interactables, true);
+  return hits.length ? findRoot(hits[0].object) : null;
+}
+function setHover(root, x, y) {
+  if (root !== hovered) {
+    if (hovered) hovered.userData.target = 0;
+    hovered = root;
+    canvas.classList.toggle("is-pointer", !!root);
+    hoverLabel.classList.toggle("is-on", !!root);
+    if (root) hoverLabel.textContent = root.userData.label || "";
+  }
+  if (root) {
+    hoverLabel.style.left = x + "px";
+    hoverLabel.style.top = y + "px";
+    root.userData.target = 1;
+  }
+}
+
+canvas.addEventListener("pointerdown", (e) => {
+  down = { x: e.clientX, y: e.clientY, moved: false };
+  canvas.classList.add("is-grabbing");
+});
+canvas.addEventListener("pointermove", (e) => {
+  if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) down.moved = true;
+  if (e.pointerType === "mouse") {
+    setPointer(e);
+    setHover(down && down.moved ? null : pick(), e.clientX, e.clientY);
+  }
+});
+canvas.addEventListener("pointerup", (e) => {
+  canvas.classList.remove("is-grabbing");
+  if (down && !down.moved) {
+    setPointer(e);
+    const root = pick();
+    if (root) {
+      markInteracted();
+      activate(root);
+    }
+  }
+  down = null;
+});
+canvas.addEventListener("pointerleave", () => setHover(null, 0, 0));
+
+function activate(root) {
+  const d = root.userData;
+  if (d.action === "stylist") window.hoopla?.onSelect?.(d.id);
+  else if (d.action === "services") window.hoopla?.onServices?.();
+  else if (d.action === "theme") window.hoopla?.onToggleTheme?.();
+}
+
+/* ====================== resize + loop ====================== */
+function resize() {
+  const w = canvas.clientWidth || window.innerWidth;
+  const h = canvas.clientHeight || window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  const dpr = Math.min(window.devicePixelRatio, 2);
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(w, h, false); // false: keep the CSS-driven canvas size (canvas fills the hero)
+  composer.setPixelRatio(dpr);
+  composer.setSize(w, h);
+  bloom.setSize(w, h);
+}
+window.addEventListener("resize", resize);
+resize();
+
+const clock = new THREE.Clock();
+function tick() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  // smooth theme transition
+  themeT += ((night ? 1 : 0) - themeT) * Math.min(dt * 3, 1);
+  applyTheme(themeT);
+  const showDisco = themeT > 0.01;
+
+  // hover/idle animation on interactables
+  for (const o of interactables) {
+    const target = o.userData.target || 0;
+    o.userData.hover += (target - o.userData.hover) * Math.min(dt * 8, 1);
+    if (o.userData.action === "stylist") {
+      o.scale.setScalar(1 + o.userData.hover * 0.07);
+      const base = o.userData.baseRotY || 0;
+      if (showDisco) {
+        // bust a move
+        const beat = t * 4 + o.position.x * 1.7;
+        const hop = o.userData.seated ? 0.05 : 0.2;
+        o.position.y = Math.abs(Math.sin(beat)) * hop * themeT + o.userData.hover * 0.08;
+        o.rotation.y = base + Math.sin(beat * 0.5) * 0.3 * themeT;
+        o.rotation.z = Math.sin(beat) * 0.07 * themeT;
+      } else {
+        o.position.y = Math.sin(t * 1.6 + o.position.x) * 0.04 + o.userData.hover * 0.08;
+        o.rotation.y = base;
+        o.rotation.z = 0;
+      }
+    } else if (o.userData.action === "services") {
+      o.scale.setScalar(1 + o.userData.hover * 0.04);
+    }
+  }
+
+  // neon flicker at night
+  if (neonMat) neonMat.opacity = lerp(0.4, 1, themeT) * (0.92 + Math.sin(t * 22) * 0.04 * themeT);
+
+  // confetti drift
+  if (confetti) {
+    const p = confetti.geometry.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      let y = p.getY(i) - dt * (0.25 + (i % 5) * 0.05);
+      let x = p.getX(i) + Math.sin(t + i) * dt * 0.15;
+      if (y < 0) {
+        y = 8;
+        x = (Math.random() - 0.5) * 14;
+      }
+      p.setX(i, x);
+      p.setY(i, y);
+    }
+    p.needsUpdate = true;
+    confetti.rotation.y = t * 0.02;
+  }
+
+  // disco mode (active in night)
+  danceFloor.visible = showDisco;
+  discoRig.visible = showDisco;
+  if (showDisco) {
+    discoRig.position.y = lerp(8.5, 4.6, themeT);
+    discoBall.rotation.y += dt * 0.8;
+    discoBall.material.emissiveIntensity = themeT * 0.5;
+    for (const tile of danceTiles) {
+      tile.mat.emissive.setHSL((t * 0.08 + tile.h) % 1, 0.85, 0.55);
+      tile.mat.emissiveIntensity = themeT * (0.45 + 0.55 * Math.sin(t * 3 + tile.h * 12));
+    }
+    discoLights.forEach((l, i) => {
+      const a = t * 0.9 + (i / 3) * Math.PI * 2;
+      l.position.set(Math.cos(a) * 4.2, 3.6 + Math.sin(t * 1.6 + i) * 1.1, 0.6 + Math.sin(a) * 4.2);
+      l.intensity = themeT * 2.4;
+    });
+  } else {
+    discoLights.forEach((l) => (l.intensity = 0));
+  }
+  // disco divas — swap into sequined disco outfits at night (steady, no flashing)
+  const wantDisco = themeT > 0.5;
+  if (wantDisco !== discoOn) {
+    discoOn = wantDisco;
+    for (const o of discoOutfits) {
+      if (wantDisco) {
+        o.mat.map = sequinTex;
+        o.mat.color.set(o.discoTint);
+        o.mat.emissive.set(o.discoTint);
+        o.mat.emissiveIntensity = 0.12;
+        o.mat.metalness = 0.55;
+        o.mat.roughness = 0.35;
+      } else {
+        o.mat.map = o.dayMap;
+        o.mat.color.set(o.dayColor);
+        o.mat.emissive.set(0x000000);
+        o.mat.emissiveIntensity = 0;
+        o.mat.metalness = 0;
+        o.mat.roughness = o.dayRough;
+      }
+      o.mat.needsUpdate = true;
+    }
+    // Lana turns into a banana at night 🍌
+    lanaSlot.userData.figure.visible = !wantDisco;
+    lanaSlot.userData.banana.visible = wantDisco;
+  }
+
+  controls.update();
+  composer.render();
+  requestAnimationFrame(tick);
+}
+
+/* ====================== boot ====================== */
+async function boot() {
+  const loaderEl = document.getElementById("loader");
+  loaderEl?.removeAttribute("hidden"); // show the boot spinner now the scene is actually loading
+  document.getElementById("explore")?.removeAttribute("hidden");
+  try {
+    await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
+  } catch (e) {
+    /* fonts optional */
+  }
+  if (neonMat) {
+    neonMat.map = neonTex("hoopla"); // redraw now the handwritten font is ready
+    neonMat.needsUpdate = true;
+  }
+  // sync with whatever theme the controller already set (the site can be in dark mode pre-load)
+  night = document.documentElement.classList.contains("dark");
+  themeT = night ? 1 : 0;
+  applyTheme(themeT);
+  composer.render();
+  requestAnimationFrame(() => {
+    loaderEl?.classList.add("is-hidden");
+    document.querySelector(".hero")?.classList.add("scene-active"); // fade the poster out
+    tick();
+  });
+}
+boot();
