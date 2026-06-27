@@ -29,14 +29,15 @@ $("#themeToggle")?.addEventListener("click", toggleTheme);
 
 /* ---------- mobile menu ---------- */
 const menuToggle = $("#menuToggle");
-menuToggle?.addEventListener("click", () => {
-  const open = document.body.classList.toggle("menu-open");
-  menuToggle.setAttribute("aria-expanded", String(open));
-});
-document.querySelectorAll("#overlayNav a").forEach((a) =>
-  a.addEventListener("click", () => document.body.classList.remove("menu-open"))
-);
-$("#brand")?.addEventListener("click", () => document.body.classList.remove("menu-open"));
+const overlayNav = $("#overlayNav");
+function setMenu(open) {
+  document.body.classList.toggle("menu-open", open);
+  menuToggle?.setAttribute("aria-expanded", String(open));
+  overlayNav?.setAttribute("aria-hidden", String(!open)); // expose drawer to assistive tech when open
+}
+menuToggle?.addEventListener("click", () => setMenu(!document.body.classList.contains("menu-open")));
+document.querySelectorAll("#overlayNav a").forEach((a) => a.addEventListener("click", () => setMenu(false)));
+$("#brand")?.addEventListener("click", () => setMenu(false));
 
 /* ---------- booking analytics (delegated; no-op if no analytics present) ---------- */
 document.addEventListener("click", (e) => {

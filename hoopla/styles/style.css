@@ -54,6 +54,11 @@ html.dark {
   padding: 0;
 }
 
+/* the [hidden] attribute must win over component display rules (.loader, .btn, …) */
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--header-h) + 12px);
