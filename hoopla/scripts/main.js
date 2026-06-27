@@ -36,6 +36,7 @@ function setMenu(open) {
   overlayNav?.setAttribute("aria-hidden", String(!open)); // expose drawer to assistive tech when open
 }
 menuToggle?.addEventListener("click", () => setMenu(!document.body.classList.contains("menu-open")));
+$("#menuClose")?.addEventListener("click", () => setMenu(false));
 document.querySelectorAll("#overlayNav a").forEach((a) => a.addEventListener("click", () => setMenu(false)));
 $("#brand")?.addEventListener("click", () => setMenu(false));
 
