@@ -16,12 +16,12 @@
   --ink: var(--plum);
   --ink-soft: rgba(67, 50, 58, 0.74);
   --gold-ink: #766810;
-  --bg: #f3ecdb;
-  --bg-alt: #e9e7d0;
+  --bg: var(--lime); /* Hoopla page background */
+  --bg-alt: var(--offwhite);
   --card-bg: rgba(250, 249, 245, 0.85);
-  --card-border: rgba(67, 50, 58, 0.14);
-  --card-shadow: 0 24px 60px -30px rgba(67, 50, 58, 0.5);
-  --header-bg: rgba(243, 236, 219, 0.8);
+  --card-border: rgba(67, 50, 58, 0.16);
+  --card-shadow: 0 22px 48px -28px rgba(67, 50, 58, 0.55);
+  --header-bg: var(--mustard);
 
   --font-display: "Archivo Black", system-ui, sans-serif;
   --font-body: "Space Grotesk", system-ui, sans-serif;
@@ -66,7 +66,7 @@ html {
 
 body {
   font-family: var(--font-body);
-  font-weight: 500;
+  font-weight: 600;
   color: var(--ink);
   line-height: 1.55;
   background: var(--bg);
@@ -145,17 +145,15 @@ html.dark .btn--ghost {
   gap: 1rem;
   padding: 0 clamp(14px, 4vw, 28px);
   background: var(--header-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--card-border);
+  border-bottom: 2px solid var(--plum);
 }
 .brand {
   font-family: var(--font-display);
-  font-size: 1.3rem;
-  letter-spacing: 0.04em;
-  text-transform: lowercase;
+  font-size: 1.25rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   text-decoration: none;
-  color: var(--ink);
+  color: var(--plum);
 }
 .brand__dot {
   color: var(--mustard);
@@ -169,14 +167,14 @@ html.dark .btn--ghost {
 }
 .site-nav a {
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.82rem;
-  color: var(--ink-soft);
+  color: var(--plum);
 }
 .site-nav a:hover {
-  color: var(--ink);
+  opacity: 0.65;
 }
 .header-actions {
   display: flex;
@@ -188,9 +186,9 @@ html.dark .btn--ghost {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  border: 1px solid var(--card-border);
+  border: 1.5px solid var(--plum);
   background: transparent;
-  color: var(--ink);
+  color: var(--plum);
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -308,8 +306,7 @@ html.dark .overlay-nav {
   inset: 0;
   z-index: 0;
   background-image: url("../assets/poster.webp"),
-    radial-gradient(120% 90% at 50% 10%, #f6ead7, transparent),
-    linear-gradient(160deg, #efe2c8 0%, #e6c9a8 45%, #b9c6a0 100%);
+    linear-gradient(160deg, #f3e7d8 0%, #ded663 55%, #ddeab3 100%);
   background-size: cover;
   background-position: center;
   transition: opacity 0.8s ease;
@@ -406,6 +403,83 @@ html.dark .hero__poster {
 .section--alt {
   background: var(--bg-alt);
 }
+
+/* ---------- Hoopla colour blocks (matches the original site) ---------- */
+.block--lime {
+  background: var(--lime);
+  color: var(--plum);
+}
+.block--mustard {
+  background: var(--mustard);
+  color: var(--plum);
+}
+.block--offwhite {
+  background: var(--offwhite);
+  color: var(--plum);
+}
+.block--plum {
+  background: var(--plum);
+  color: var(--lime);
+}
+.block--plum > h2,
+.block--plum > .kicker {
+  color: var(--mustard);
+}
+.block--plum .menu li {
+  border-color: rgba(221, 234, 179, 0.25);
+}
+.block--plum .hand {
+  color: rgba(221, 234, 179, 0.78);
+}
+.block--plum .btn--ghost {
+  color: var(--lime);
+  box-shadow: inset 0 0 0 2px var(--lime);
+}
+/* keep accent text legible on the bright mustard block */
+.block--mustard .kicker,
+.block--mustard .info-cols h3,
+.block--mustard .menu .price {
+  color: var(--plum);
+}
+
+/* dark mode keeps the blocks coherent */
+html.dark .block--lime,
+html.dark .block--mustard,
+html.dark .block--offwhite {
+  background: var(--bg-alt);
+  color: var(--ink);
+}
+html.dark .block--plum {
+  background: #0e0b14;
+  color: var(--ink);
+}
+html.dark .block--plum > h2,
+html.dark .block--plum > .kicker {
+  color: var(--mustard);
+}
+html.dark .block--mustard .kicker,
+html.dark .block--mustard .info-cols h3,
+html.dark .block--mustard .menu .price {
+  color: var(--gold-ink);
+}
+html.dark .site-header {
+  background: var(--bg-alt);
+  border-bottom-color: var(--card-border);
+}
+html.dark .brand,
+html.dark .site-nav a {
+  color: var(--ink);
+}
+html.dark .icon-btn {
+  border-color: var(--card-border);
+  color: var(--ink);
+}
+html.dark .stylist-card {
+  background: var(--card-bg);
+  color: var(--ink);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
 .section > * {
   max-width: var(--maxw);
   margin-inline: auto;
@@ -474,12 +548,11 @@ html.dark .hero__poster {
   margin-top: 0.5rem;
 }
 .stylist-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  background: var(--offwhite);
+  color: var(--plum);
+  border: none;
   border-radius: var(--radius-card);
   box-shadow: var(--card-shadow);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   padding: 1.4rem;
   display: flex;
   flex-direction: column;
@@ -577,7 +650,7 @@ html.dark .badges li {
   padding: 3rem 1.5rem 6rem;
   text-align: center;
   background: var(--plum);
-  color: var(--offwhite);
+  color: var(--lime);
 }
 .site-footer a {
   color: var(--mustard);
