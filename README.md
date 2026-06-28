@@ -58,8 +58,9 @@ Filled in from the salon's public listings (Brunswick, Sydney Road):
 
 - **Phone** `+61 3 9388 9929` — in the JSON-LD, contact block, and action bar.
 - **Address** 345 Sydney Road, Brunswick VIC 3056.
-- **Opening hours** Tue–Thu 9–9, Fri 9–8, Sat 9–4 (Sun & Mon closed) — in the
-  contact block, the JSON-LD `openingHoursSpecification`, and the `<noscript>`.
+- **Opening hours** Tue 1–8, Wed–Thu 10–9, Fri 10–8 (Sat–Mon closed), matched to
+  the Kitomba booking source — in the contact block, the JSON-LD
+  `openingHoursSpecification`, and the `<noscript>`.
 
 Still owner-to-confirm:
 
