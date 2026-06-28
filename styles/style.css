@@ -233,7 +233,8 @@ a {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background-image: url("../assets/poster.webp"), linear-gradient(160deg, #b7a8ad, #968a92);
+  /* swap to assets/poster.webp once a real photo is supplied (see README) */
+  background-image: url("../assets/poster.svg"), linear-gradient(160deg, #b7a8ad, #968a92);
   background-size: cover;
   background-position: center;
   transition: opacity 0.8s ease;
