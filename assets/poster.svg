@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hoopla Salon — hero poster PLACEHOLDER.
+  Shown before/instead of the 3D scene (and as the social-share image).
+  To use a real photo: drop a 1200×1200 (or wider) image at assets/poster.webp,
+  then point .frame__poster (styles/style.css) and og:image/JSON-LD image
+  (index.html) back at "assets/poster.webp". See README → "Before launch".
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" role="img"
+     aria-label="Inside Hoopla Salon — placeholder">
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#b7a8ad"/>
+      <stop offset="1" stop-color="#8f828a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="1200" fill="url(#ground)"/>
+
+  <!-- celebratory "hoopla" hoops -->
+  <g fill="none" stroke="#3d2e36" stroke-opacity="0.85">
+    <circle cx="600" cy="470" r="225" stroke-width="14"/>
+    <circle cx="600" cy="470" r="170" stroke-width="9" stroke-opacity="0.45"/>
+    <circle cx="600" cy="470" r="115" stroke-width="5" stroke-opacity="0.30"/>
+  </g>
+  <!-- confetti -->
+  <g fill="#d9df68">
+    <circle cx="330" cy="300" r="13"/>
+    <circle cx="880" cy="360" r="9"/>
+    <circle cx="850" cy="640" r="14"/>
+    <circle cx="360" cy="610" r="8"/>
+    <rect x="470" y="210" width="20" height="20" transform="rotate(20 480 220)"/>
+    <rect x="740" y="720" width="16" height="16" transform="rotate(35 748 728)"/>
+  </g>
+
+  <g font-family="'Oswald','Saira Condensed','Arial Narrow',sans-serif" text-anchor="middle">
+    <text x="600" y="850" fill="#3d2e36" font-size="138" font-weight="600"
+          letter-spacing="6">HOOPLA SALON</text>
+  </g>
+  <g font-family="'Fredoka','Nunito',system-ui,sans-serif" text-anchor="middle">
+    <text x="600" y="930" fill="#3d2e36" fill-opacity="0.8" font-size="42"
+          font-style="italic">excitement, celebration, something worth talking about</text>
+  </g>
+</svg>

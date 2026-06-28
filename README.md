@@ -52,13 +52,27 @@ is fully usable with the 3D never loading.
 `scene.js` keeps its editable config (`C`, `STYLISTS`, `STATIONS`, `DISCO_TINTS`)
 at the top; everything from the `build the room` banner down is scene machinery.
 
-## Before launch (placeholders to confirm)
+## Real details vs. things to confirm
 
-- Real **phone number** (currently `+61300000000` in the JSON-LD, contact, and
-  action bar).
-- Confirmed **prices** and **opening hours**.
-- A real **hero photo** at `assets/poster.webp`.
-- The approximated **fonts** (Oswald / Fredoka / Nunito) and chartreuse hex.
+Filled in from the salon's public listings (Brunswick, Sydney Road):
+
+- **Phone** `+61 3 9388 9929` — in the JSON-LD, contact block, and action bar.
+- **Address** 345 Sydney Road, Brunswick VIC 3056.
+- **Opening hours** Tue–Thu 9–9, Fri 9–8, Sat 9–4 (Sun & Mon closed) — in the
+  contact block, the JSON-LD `openingHoursSpecification`, and the `<noscript>`.
+
+Still owner-to-confirm:
+
+- **Prices** — kept realistic but marked *indicative* (the salon publishes no
+  public price list; confirm against the Kitomba menu, then drop the "indicative"
+  note in `index.html` once locked).
+- **Hero photo** — `assets/poster.svg` is a **branded placeholder**. To use a
+  real photo, add `assets/poster.webp` (square ~1200×1200 looks best) and point
+  `.frame__poster` (`styles/style.css`), `og:image`, and the JSON-LD `image`
+  (`index.html`) back at `assets/poster.webp`.
+- **Fonts / chartreuse hex** — Oswald / Fredoka / Nunito and `#d9df68` are
+  matched by eye from the live site (which blocks automated inspection); confirm
+  against the real brand kit if one exists.
 
 ## Run locally
 
