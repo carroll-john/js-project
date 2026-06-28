@@ -14,7 +14,7 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
  *   click the desk  -> onServices()      (controller scrolls to the menu)
  *   tap the neon    -> onToggleTheme()   (controller flips .dark + night)
  *   controller drives night/disco back via setNight(bool).
- * See hoopla/README.md for the full architecture + "how to edit" guide.
+ * See README.md for the full architecture + "how to edit" guide.
  *
  * EDITABLE CONFIG is all up top: C (palette), STYLISTS (team visuals),
  * STATIONS + the Emma/Lana placements, DISCO_TINTS. Everything from
