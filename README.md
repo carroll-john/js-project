@@ -27,13 +27,15 @@ scene.js calls: onSelect(id)    -> main.js opens the stylist <dialog>
 scene.js sets:  window.hoopla.setNight = (bool) => ...   (so main.js can drive night/disco)
 ```
 
-## Lazy-load gating (in `main.js`)
+## Click-to-enter gating (in `main.js`)
 
-The scene is `import()`-ed only if WebGL is supported, motion isn't reduced,
-data-saver is off, and the device looks capable (memory/cores/screen). Otherwise
-the **poster fallback** (`#poster`, drop a real image at `assets/poster.webp`)
-stays and a **"Step inside ▸"** opt-in button is shown. The page (info + booking)
-is fully usable with the 3D never loading.
+The heavy 3D never auto-loads. When WebGL is supported and motion isn't reduced,
+an **"Enter the salon ▸"** button (`#stepInside`) is shown over the
+**poster fallback** (`#poster`, drop a real image at `assets/poster.webp`);
+clicking it `import()`s `scene.js`, which plays the walk-in entrance and then
+hands off to free exploration. Until then — and on no-WebGL / reduced-motion
+devices, where the button stays hidden — the poster stays and the page
+(info + booking) is fully usable with the 3D never loading.
 
 ## How to change things
 
