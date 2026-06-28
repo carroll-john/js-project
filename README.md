@@ -66,10 +66,12 @@ Still owner-to-confirm:
 - **Prices** — kept realistic but marked *indicative* (the salon publishes no
   public price list; confirm against the Kitomba menu, then drop the "indicative"
   note in `index.html` once locked).
-- **Hero photo** — `assets/poster.svg` is a **branded placeholder**. To use a
-  real photo, add `assets/poster.webp` (square ~1200×1200 looks best) and point
+- **Hero photo** — branded **placeholders**: `assets/poster.svg` (crisp on-page
+  poster, used by `.frame__poster`) and `assets/poster.png` (1200×630 raster for
+  social cards, since X/Open Graph don't render SVG — used by `og:image` + the
+  JSON-LD `image`). To use a real photo, add `assets/poster.webp` and point
   `.frame__poster` (`styles/style.css`), `og:image`, and the JSON-LD `image`
-  (`index.html`) back at `assets/poster.webp`.
+  (`index.html`) at it (a ~1200×630 JPEG/WebP is the safest social size).
 - **Fonts / chartreuse hex** — Oswald / Fredoka / Nunito and `#d9df68` are
   matched by eye from the live site (which blocks automated inspection); confirm
   against the real brand kit if one exists.
