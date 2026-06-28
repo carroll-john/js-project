@@ -112,15 +112,10 @@ function loadScene() {
 }
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const small = matchMedia("(max-width: 768px)").matches;
-const saveData = navigator.connection && navigator.connection.saveData;
-const mem = navigator.deviceMemory ?? 4;
-const cores = navigator.hardwareConcurrency ?? 4;
-
 const canRun = hasWebGL() && !reduced;
-// only auto-load the heavy scene on capable, non-metered, larger devices
-const autoLoad = canRun && !saveData && !small && mem >= 4 && cores >= 4;
 
-if (canRun) stepInside?.removeAttribute("hidden"); // always offer it as opt-in when possible
-if (autoLoad) requestAnimationFrame(loadScene); // load after first paint, never blocking it
+// Entering the salon is a deliberate click — the heavy 3D never auto-loads, so
+// the page (info + booking) is instant and the walk-in entrance plays on demand.
+// (Hidden when WebGL is unavailable or motion is reduced; the poster stays.)
+if (canRun) stepInside?.removeAttribute("hidden");
 stepInside?.addEventListener("click", loadScene);
