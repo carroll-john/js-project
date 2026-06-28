@@ -79,6 +79,61 @@ controls.target.set(0, 1.7, -0.5);
 controls.autoRotate = true;
 controls.autoRotateSpeed = 0.55;
 
+/* ====================== intro: "walk into the salon" ====================== *
+ * On open, the camera enters at eye height near the open front of the room and
+ * flies a curved path that dives forward onto the floor, then lifts up-and-out
+ * into the resting 3/4 overview where it hands control to OrbitControls for free
+ * exploration. The fly is skippable the instant the visitor touches the canvas. */
+const ENT_POS = new THREE.Vector3(2.0, 1.7, 12.0); // eye height, just inside the open front corner
+const ENT_CTRL = new THREE.Vector3(1.0, 3.2, -2.0); // bézier control point — bends the path forward into the room
+const ENT_TGT = new THREE.Vector3(-0.4, 0.9, 1.0); // look down-and-into the salon on arrival
+const ENT_FOV = 60; // a touch wider at the threshold; settles to REST_FOV
+const REST_POS = new THREE.Vector3(8.5, 7, 11); // canonical resting pose (mirrors camera.position above)
+const REST_TGT = new THREE.Vector3(0, 1.7, -0.5); // canonical target (mirrors controls.target above)
+const REST_FOV = 50;
+const INTRO_HOLD = 0.35; // seconds paused at the threshold before moving
+const INTRO_MOVE = 2.9; // seconds of flight
+const easeInOutCubic = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const _introPos = new THREE.Vector3();
+const _introTgt = new THREE.Vector3();
+let introActive = false;
+let introElapsed = 0;
+let skipConsumed = false; // the gesture that dismisses the intro must not also fire a click action
+
+// quadratic bézier P0 ->(control)-> P2 written into `out`
+function bezier3(out, p0, p1, p2, t) {
+  const u = 1 - t;
+  return out.set(
+    u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
+    u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y,
+    u * u * p0.z + 2 * u * t * p1.z + t * t * p2.z
+  );
+}
+
+function startIntro() {
+  introActive = true;
+  introElapsed = 0;
+  controls.enabled = false; // we drive the camera during the fly; OrbitControls stays dormant
+  camera.position.copy(ENT_POS);
+  camera.fov = ENT_FOV;
+  camera.updateProjectionMatrix();
+  camera.lookAt(ENT_TGT);
+}
+
+function endIntro(skipped) {
+  if (!introActive) return; // idempotent: a natural end and a skip can race within one frame
+  introActive = false;
+  // snap to the exact canonical rest pose so OrbitControls re-derives its spherical with no jump
+  camera.position.copy(REST_POS);
+  camera.fov = REST_FOV;
+  camera.updateProjectionMatrix();
+  controls.target.copy(REST_TGT);
+  camera.lookAt(REST_TGT);
+  controls.enabled = true;
+  if (skipped) markInteracted(); // visitor is taking over: stop autorotate + hide the hint now
+  else document.getElementById("explore")?.classList.remove("is-hidden"); // reveal the hint on natural arrival
+}
+
 /* ====================== helpers ====================== */
 function clay(color, extra = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.95, metalness: 0, ...extra });
@@ -947,6 +1002,11 @@ canvas.addEventListener("pointermove", (e) => {
 });
 canvas.addEventListener("pointerup", (e) => {
   canvas.classList.remove("is-grabbing");
+  if (skipConsumed) {
+    skipConsumed = false;
+    down = null; // the gesture that dismissed the intro shouldn't also fire a click action
+    return;
+  }
   if (down && !down.moved) {
     setPointer(e);
     const root = pick();
@@ -958,6 +1018,19 @@ canvas.addEventListener("pointerup", (e) => {
   down = null;
 });
 canvas.addEventListener("pointerleave", () => setHover(null, 0, 0));
+
+// Skip the intro the instant the visitor touches the canvas. Capture phase so this
+// runs BEFORE OrbitControls' own pointerdown handler (registered at construction):
+// controls.enabled is true by the time OrbitControls sees the event, so a drag that
+// dismisses the intro flows straight into orbiting with no dead gesture.
+canvas.addEventListener(
+  "pointerdown",
+  () => {
+    skipConsumed = introActive; // true only when this gesture is the one dismissing the intro
+    if (introActive) endIntro(true);
+  },
+  true
+);
 
 function activate(root) {
   const d = root.userData;
@@ -987,6 +1060,30 @@ let lastThemeT = -1;
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
+
+  // intro fly: drive the camera manually along the entrance path. Never call
+  // controls.update() while active — autoRotate runs regardless of enabled and
+  // would fight the animation — so this branch early-returns.
+  if (introActive) {
+    introElapsed += dt;
+    if (introElapsed < INTRO_HOLD) {
+      camera.position.copy(ENT_POS); // brief pause at the threshold
+      camera.lookAt(ENT_TGT);
+    } else {
+      const u = Math.min((introElapsed - INTRO_HOLD) / INTRO_MOVE, 1);
+      const e = easeInOutCubic(u);
+      bezier3(_introPos, ENT_POS, ENT_CTRL, REST_POS, e);
+      camera.position.copy(_introPos);
+      _introTgt.lerpVectors(ENT_TGT, REST_TGT, e);
+      camera.fov = ENT_FOV + (REST_FOV - ENT_FOV) * e;
+      camera.updateProjectionMatrix();
+      camera.lookAt(_introTgt);
+      if (u >= 1) endIntro(false); // arrived at the resting pose — hand off to OrbitControls
+    }
+    composer.render();
+    requestAnimationFrame(tick);
+    return;
+  }
 
   // smooth theme transition — only re-apply lights/materials while it's changing
   const themeTarget = night ? 1 : 0;
@@ -1088,7 +1185,7 @@ function tick() {
     lanaSlot.userData.banana.visible = wantDisco;
   }
 
-  controls.update();
+  if (!introActive) controls.update(); // intro drives the camera itself
   composer.render();
   requestAnimationFrame(tick);
 }
@@ -1098,6 +1195,7 @@ async function boot() {
   const loaderEl = document.getElementById("loader");
   loaderEl?.removeAttribute("hidden"); // show the boot spinner now the scene is actually loading
   document.getElementById("explore")?.removeAttribute("hidden");
+  document.getElementById("explore")?.classList.add("is-hidden"); // stay invisible until the intro fly lands
   try {
     await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
   } catch (e) {
@@ -1111,6 +1209,7 @@ async function boot() {
   night = document.documentElement.classList.contains("dark");
   themeT = night ? 1 : 0;
   applyTheme(themeT);
+  startIntro(); // place the camera at the doorway so the first revealed frame is the entrance, not the overview
   composer.render();
   requestAnimationFrame(() => {
     loaderEl?.classList.add("is-hidden");
